@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI Testing Interface</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+        }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 500px 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        #myBoard {
+            width: 500px;
+            margin: 0 auto;
+        }
+        
+        .control-panel {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+        }
+        
+        .section h3 {
+            margin-top: 0;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 12px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        button.secondary:hover:not(:disabled) {
+            background: #5a6268;
+        }
+        
+        button.danger {
+            background: #dc3545;
+        }
+        
+        button.danger:hover:not(:disabled) {
+            background: #c82333;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-box.wins { border-color: #28a745; }
+        .stat-box.losses { border-color: #dc3545; }
+        .stat-box.draws { border-color: #ffc107; }
+        .stat-box.total { border-color: #667eea; }
+        
+        .stat-box.wins .stat-value { color: #28a745; }
+        .stat-box.losses .stat-value { color: #dc3545; }
+        .stat-box.draws .stat-value { color: #ffc107; }
+        .stat-box.total .stat-value { color: #667eea; }
+        
+        .game-log {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .log-entry {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        
+        .log-entry.win { background: #d4edda; }
+        .log-entry.loss { background: #f8d7da; }
+        .log-entry.draw { background: #fff3cd; }
+        
+        .status-display {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 20px;
+        }
+        
+        .speed-control {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .speed-control label {
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .speed-control input {
+            width: 100%;
+        }
+        
+        .opponent-select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .win-rate {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .export-buttons button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Chess AI Testing Interface</h1>
+        
+        <div class="main-layout">
+            <!-- Left Panel: Controls -->
+            <div class="control-panel">
+                <div class="section">
+                    <h3>Test Configuration</h3>
+                    <label style="display: block; margin-bottom: 10px;">
+                        Opponent:
+                        <select class="opponent-select" id="opponentSelect">
+                            <option value="random">Random Moves (baseline)</option>
+                            <option value="material">Material Only (~600 ELO)</option>
+                            <option value="basic" selected>Basic AI (~800 ELO)</option>
+                        </select>
+                    </label>
+                    
+                    <label style="display: block; margin-bottom: 10px;">
+                        Your AI plays as:
+                        <select class="opponent-select" id="colorSelect">
+                            <option value="white">White</option>
+                            <option value="black">Black</option>
+                            <option value="both" selected>Both (alternating)</option>
+                        </select>
+                    </label>
+                    
+                    <label style="display: block; margin-bottom: 10px;">
+                        Number of games:
+                        <input type="number" class="opponent-select" id="numGames" value="10" min="1" max="100">
+                    </label>
+                </div>
+                
+                <div class="section">
+                    <h3>Speed Control</h3>
+                    <div class="speed-control">
+                        <label>Move Delay: <span id="speedValue">500</span>ms</label>
+                        <input type="range" id="speedSlider" min="50" max="2000" value="500" step="50">
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>Controls</h3>
+                    <div class="button-group">
+                        <button id="startBtn">▶ Start Testing</button>
+                        <button id="pauseBtn" class="secondary" disabled>⏸ Pause</button>
+                        <button id="stopBtn" class="danger" disabled>⏹ Stop</button>
+                        <button id="resetBtn" class="secondary">🔄 Reset Stats</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Center: Board -->
+            <div>
+                <div class="status-display" id="status">Ready to start testing</div>
+                <div id="myBoard"></div>
+            </div>
+            
+            <!-- Right Panel: Statistics -->
+            <div class="control-panel">
+                <div class="section">
+                    <h3>Test Results</h3>
+                    <div class="stats-grid">
+                        <div class="stat-box wins">
+                            <div class="stat-label">Wins</div>
+                            <div class="stat-value" id="winsCount">0</div>
+                        </div>
+                        <div class="stat-box losses">
+                            <div class="stat-label">Losses</div>
+                            <div class="stat-value" id="lossesCount">0</div>
+                        </div>
+                        <div class="stat-box draws">
+                            <div class="stat-label">Draws</div>
+                            <div class="stat-value" id="drawsCount">0</div>
+                        </div>
+                        <div class="stat-box total">
+                            <div class="stat-label">Total</div>
+                            <div class="stat-value" id="totalCount">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="win-rate" id="winRate">Win Rate: 0%</div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressBar" style="width: 0%">0%</div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>Game Log</h3>
+                    <div class="game-log" id="gameLog">
+                        <div style="color: #666; text-align: center; padding: 20px;">
+                            No games played yet
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Export Results</h3>
+                    <div class="export-buttons">
+                        <button id="exportCsvBtn" class="secondary">📊 Export CSV</button>
+                        <button id="exportPgnBtn" class="secondary">♟️ Export PGN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+    <script>
+        // Game state
+        let game = new Chess();
+        let board;
+        let testingInProgress = false;
+        let testingPaused = false;
+        let currentGameNumber = 0;
+        let totalGamesToPlay = 10;
+        let moveDelay = 500;
+        
+        // Statistics
+        let stats = {
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            total: 0
+        };
+        
+        let gameHistory = [];
+        
+        // Piece values
+        const pieceValues = {
+            'p': 100, 'n': 320, 'b': 330, 'r': 500, 'q': 900, 'k': 20000
+        };
+
+        // Piece-square tables
+        const pawnTable = [
+            0,  0,  0,  0,  0,  0,  0,  0,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            10, 10, 20, 30, 30, 20, 10, 10,
+            5,  5, 10, 25, 25, 10,  5,  5,
+            0,  0,  0, 20, 20,  0,  0,  0,
+            5, -5,-10,  0,  0,-10, -5,  5,
+            5, 10, 10,-20,-20, 10, 10,  5,
+            0,  0,  0,  0,  0,  0,  0,  0
+        ];
+
+        const knightTable = [
+            -50,-40,-30,-30,-30,-30,-40,-50,
+            -40,-20,  0,  0,  0,  0,-20,-40,
+            -30,  0, 10, 15, 15, 10,  0,-30,
+            -30,  5, 15, 20, 20, 15,  5,-30,
+            -30,  0, 15, 20, 20, 15,  0,-30,
+            -30,  5, 10, 15, 15, 10,  5,-30,
+            -40,-20,  0,  5,  5,  0,-20,-40,
+            -50,-40,-30,-30,-30,-30,-40,-50
+        ];
+
+        const bishopTable = [
+            -20,-10,-10,-10,-10,-10,-10,-20,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  5, 10, 10,  5,  0,-10,
+            -10,  5,  5, 10, 10,  5,  5,-10,
+            -10,  0, 10, 10, 10, 10,  0,-10,
+            -10, 10, 10, 10, 10, 10, 10,-10,
+            -10,  5,  0,  0,  0,  0,  5,-10,
+            -20,-10,-10,-10,-10,-10,-10,-20
+        ];
+
+        const rookTable = [
+            0,  0,  0,  0,  0,  0,  0,  0,
+            5, 10, 10, 10, 10, 10, 10,  5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            0,  0,  0,  5,  5,  0,  0,  0
+        ];
+
+        const queenTable = [
+            -20,-10,-10, -5, -5,-10,-10,-20,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  5,  5,  5,  5,  0,-10,
+            -5,  0,  5,  5,  5,  5,  0, -5,
+            0,  0,  5,  5,  5,  5,  0, -5,
+            -10,  5,  5,  5,  5,  5,  0,-10,
+            -10,  0,  5,  0,  0,  0,  0,-10,
+            -20,-10,-10, -5, -5,-10,-10,-20
+        ];
+
+        const kingTable = [
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -20,-30,-30,-40,-40,-30,-30,-20,
+            -10,-20,-20,-20,-20,-20,-20,-10,
+            20, 20,  0,  0,  0,  0, 20, 20,
+            20, 30, 10,  0,  0, 10, 30, 20
+        ];
+
+        function getPieceSquareTable(piece) {
+            const tables = {
+                'p': pawnTable, 'n': knightTable, 'b': bishopTable,
+                'r': rookTable, 'q': queenTable, 'k': kingTable
+            };
+            return tables[piece.toLowerCase()];
+        }
+
+        function evaluateBoard() {
+            let totalEvaluation = 0;
+            
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const square = String.fromCharCode(97 + j) + (8 - i);
+                    const piece = game.get(square);
+                    
+                    if (piece) {
+                        const absoluteValue = getPieceValue(piece, i, j);
+                        totalEvaluation += piece.color === 'w' ? absoluteValue : -absoluteValue;
+                    }
+                }
+            }
+            
+            return totalEvaluation;
+        }
+
+        function getPieceValue(piece, x, y) {
+            const pieceType = piece.type;
+            const pieceValue = pieceValues[pieceType];
+            
+            let squareIndex = x * 8 + y;
+            if (piece.color === 'b') {
+                squareIndex = (7 - x) * 8 + y;
+            }
+            
+            const table = getPieceSquareTable(pieceType);
+            const positionValue = table[squareIndex];
+            
+            return pieceValue + positionValue;
+        }
+
+        function evaluateMaterial() {
+            let totalEvaluation = 0;
+            
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const square = String.fromCharCode(97 + j) + (8 - i);
+                    const piece = game.get(square);
+                    
+                    if (piece) {
+                        const pieceValue = pieceValues[piece.type];
+                        totalEvaluation += piece.color === 'w' ? pieceValue : -pieceValue;
+                    }
+                }
+            }
+            
+            return totalEvaluation;
+        }
+
+        function minimax(depth, alpha, beta, isMaximizingPlayer) {
+            if (depth === 0) {
+                return evaluateBoard();
+            }
+
+            const possibleMoves = game.moves();
+
+            if (isMaximizingPlayer) {
+                let maxEval = -Infinity;
+                for (const move of possibleMoves) {
+                    game.move(move);
+                    const evaluation = minimax(depth - 1, alpha, beta, false);
+                    game.undo();
+                    maxEval = Math.max(maxEval, evaluation);
+                    alpha = Math.max(alpha, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (const move of possibleMoves) {
+                    game.move(move);
+                    const evaluation = minimax(depth - 1, alpha, beta, true);
+                    game.undo();
+                    minEval = Math.min(minEval, evaluation);
+                    beta = Math.min(beta, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return minEval;
+            }
+        }
+
+        function getBestMove(depth = 3, usePositional = true) {
+            const possibleMoves = game.moves();
+            let bestMove = null;
+            let bestValue = game.turn() === 'w' ? -Infinity : Infinity;
+
+            for (const move of possibleMoves) {
+                game.move(move);
+                const boardValue = usePositional ? 
+                    minimax(depth - 1, -Infinity, Infinity, game.turn() === 'w') :
+                    evaluateMaterial();
+                game.undo();
+
+                if (game.turn() === 'w') {
+                    if (boardValue > bestValue) {
+                        bestValue = boardValue;
+                        bestMove = move;
+                    }
+                } else {
+                    if (boardValue < bestValue) {
+                        bestValue = boardValue;
+                        bestMove = move;
+                    }
+                }
+            }
+
+            return bestMove;
+        }
+
+        function getRandomMove() {
+            const possibleMoves = game.moves();
+            const randomIdx = Math.floor(Math.random() * possibleMoves.length);
+            return possibleMoves[randomIdx];
+        }
+
+        function getOpponentMove(opponentType) {
+            switch(opponentType) {
+                case 'random':
+                    return getRandomMove();
+                case 'material':
+                    return getBestMove(1, false);
+                case 'basic':
+                    return getBestMove(3, true);
+                default:
+                    return getRandomMove();
+            }
+        }
+
+        async function playGame(yourAIColor, opponentType) {
+            game.reset();
+            board.position('start');
+            
+            const moves = [];
+            const yourAI = yourAIColor;
+            
+            while (!game.game_over()) {
+                if (testingPaused) {
+                    await new Promise(resolve => {
+                        const checkPause = setInterval(() => {
+                            if (!testingPaused) {
+                                clearInterval(checkPause);
+                                resolve();
+                            }
+                        }, 100);
+                    });
+                }
+                
+                if (!testingInProgress) return null;
+                
+                const currentTurn = game.turn() === 'w' ? 'white' : 'black';
+                let move;
+                
+                if (currentTurn === yourAI) {
+                    move = getBestMove(3, true);
+                    updateStatus(`Your AI (${yourAI}) thinking...`);
+                } else {
+                    move = getOpponentMove(opponentType);
+                    updateStatus(`Opponent thinking...`);
+                }
+                
+                if (move) {
+                    const moveObj = game.move(move);
+                    moves.push(moveObj.san);
+                    board.position(game.fen());
+                    await sleep(moveDelay);
+                }
+            }
+            
+            let result;
+            if (game.in_checkmate()) {
+                const winner = game.turn() === 'w' ? 'black' : 'white';
+                result = winner === yourAI ? 'win' : 'loss';
+            } else {
+                result = 'draw';
+            }
+            
+            return {
+                result: result,
+                moves: moves,
+                pgn: game.pgn(),
+                yourColor: yourAI,
+                opponentType: opponentType
+            };
+        }
+
+        async function runTestSuite() {
+            const opponentType = document.getElementById('opponentSelect').value;
+            const colorSelect = document.getElementById('colorSelect').value;
+            totalGamesToPlay = parseInt(document.getElementById('numGames').value);
+            
+            testingInProgress = true;
+            currentGameNumber = 0;
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = false;
+            
+            for (let i = 0; i < totalGamesToPlay; i++) {
+                if (!testingInProgress) break;
+                
+                currentGameNumber = i + 1;
+                
+                let yourColor;
+                if (colorSelect === 'both') {
+                    yourColor = (i % 2 === 0) ? 'white' : 'black';
+                } else {
+                    yourColor = colorSelect;
+                }
+                
+                updateStatus(`Playing game ${currentGameNumber}/${totalGamesToPlay} as ${yourColor}...`);
+                
+                const gameResult = await playGame(yourColor, opponentType);
+                
+                if (!gameResult) break;
+                
+                // Update statistics
+                stats.total++;
+                if (gameResult.result === 'win') stats.wins++;
+                else if (gameResult.result === 'loss') stats.losses++;
+                else stats.draws++;
+                
+                gameHistory.push(gameResult);
+                updateStatistics();
+                addLogEntry(gameResult);
+            }
+            
+            stopTesting();
+            updateStatus('Testing complete!');
+        }
+
+        function stopTesting() {
+            testingInProgress = false;
+            testingPaused = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+        }
+
+        function updateStatistics() {
+            document.getElementById('winsCount').textContent = stats.wins;
+            document.getElementById('lossesCount').textContent = stats.losses;
+            document.getElementById('drawsCount').textContent = stats.draws;
+            document.getElementById('totalCount').textContent = stats.total;
+            
+            const winRate = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+            document.getElementById('winRate').textContent = `Win Rate: ${winRate}%`;
+            
+            const progress = totalGamesToPlay > 0 ? (currentGameNumber / totalGamesToPlay) * 100 : 0;
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = progress + '%';
+            progressBar.textContent = Math.round(progress) + '%';
+        }
+
+        function addLogEntry(gameResult) {
+            const logDiv = document.getElementById('gameLog');
+            
+            if (stats.total === 1) {
+                logDiv.innerHTML = '';
+            }
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${gameResult.result}`;
+            
+            const resultText = gameResult.result === 'win' ? '✓ WIN' : 
+                             gameResult.result === 'loss' ? '✗ LOSS' : 
+                             '= DRAW';
+            
+            entry.innerHTML = `
+                <strong>Game ${stats.total}</strong> - ${resultText}<br>
+                Your AI: ${gameResult.yourColor} | Moves: ${gameResult.moves.length}<br>
+                vs ${gameResult.opponentType}
+            `;
+            
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function resetStatistics() {
+            stats = { wins: 0, losses: 0, draws: 0, total: 0 };
+            gameHistory = [];
+            currentGameNumber = 0;
+            updateStatistics();
+            document.getElementById('gameLog').innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No games played yet</div>';
+            updateStatus('Statistics reset. Ready to start testing.');
+        }
+
+        function exportToCSV() {
+            let csv = 'Game,Result,Your Color,Opponent,Moves,PGN\n';
+            
+            gameHistory.forEach((game, index) => {
+                const pgn = game.pgn.replace(/"/g, '""');
+                csv += `${index + 1},${game.result},${game.yourColor},${game.opponentType},${game.moves.length},"${pgn}"\n`;
+            });
+            
+            downloadFile(csv, 'chess-ai-test-results.csv', 'text/csv');
+        }
+
+        function exportToPGN() {
+            let pgn = '';
+            
+            gameHistory.forEach((game, index) => {
+                pgn += `[Event "AI Testing Match"]\n`;
+                pgn += `[Round "${index + 1}"]\n`;
+                pgn += `[White "${game.yourColor === 'white' ? 'Your AI' : game.opponentType}"]\n`;
+                pgn += `[Black "${game.yourColor === 'black' ? 'Your AI' : game.opponentType}"]\n`;
+                pgn += `[Result "${game.result === 'win' ? (game.yourColor === 'white' ? '1-0' : '0-1') : game.result === 'loss' ? (game.yourColor === 'white' ? '0-1' : '1-0') : '1/2-1/2'}"]\n\n`;
+                pgn += game.pgn + '\n\n\n';
+            });
+            
+            downloadFile(pgn, 'chess-ai-test-games.pgn', 'text/plain');
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type: type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize board
+        const config = {
+            draggable: false,
+            position: 'start',
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        };
+        board = Chessboard('myBoard', config);
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', runTestSuite);
+        
+        document.getElementById('pauseBtn').addEventListener('click', function() {
+            testingPaused = !testingPaused;
+            this.textContent = testingPaused ? '▶ Resume' : '⏸ Pause';
+            updateStatus(testingPaused ? 'Testing paused' : 'Testing resumed');
+        });
+        
+        document.getElementById('stopBtn').addEventListener('click', function() {
+            stopTesting();
+            updateStatus('Testing stopped by user');
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to reset all statistics?')) {
+                resetStatistics();
+            }
+        });
+        
+        document.getElementById('speedSlider').addEventListener('input', function() {
+            moveDelay = parseInt(this.value);
+            document.getElementById('speedValue').textContent = moveDelay;
+        });
+        
+        document.getElementById('exportCsvBtn').addEventListener('click', function() {
+            if (gameHistory.length === 0) {
+                alert('No games to export yet!');
+                return;
+            }
+            exportToCSV();
+        });
+        
+        document.getElementById('exportPgnBtn').addEventListener('click', function() {
+            if (gameHistory.length === 0) {
+                alert('No games to export yet!');
+                return;
+            }
+            exportToPGN();
+        });
+    </script>
+</body>
+</html>
