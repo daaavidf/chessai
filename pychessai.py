@@ -8,7 +8,8 @@ import chess
 import time
 import random
 import csv
-from multiprocessing import Pool, cpu_count
+import sys
+from multiprocessing import Pool, cpu_count, Manager
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 from enum import Enum
@@ -267,7 +268,7 @@ def get_opponent_move(board: chess.Board, opponent_type: OpponentType,
 
 def play_single_game(args: Tuple) -> GameResult:
     """Play a single game. Designed to work with multiprocessing."""
-    game_number, your_color, opponent_type, depth = args
+    game_number, your_color, opponent_type, depth, progress_dict, lock = args
     
     board = chess.Board()
     moves = []
@@ -302,6 +303,10 @@ def play_single_game(args: Tuple) -> GameResult:
         pgn_moves.append(pgn_board.san(move))
         pgn_board.push(move)
     
+    # Update progress counter
+    with lock:
+        progress_dict['completed'] += 1
+    
     return GameResult(
         game_number=game_number,
         result=result,
@@ -311,6 +316,42 @@ def play_single_game(args: Tuple) -> GameResult:
         pgn=' '.join(pgn_moves),
         move_count=len(moves)
     )
+
+
+def print_progress(completed: int, total: int, start_time: float, 
+                  wins: int = 0, losses: int = 0, draws: int = 0):
+    """Print progress bar with statistics."""
+    elapsed = time.time() - start_time
+    progress = completed / total if total > 0 else 0
+    
+    # Calculate ETA
+    if completed > 0:
+        avg_time_per_game = elapsed / completed
+        remaining = total - completed
+        eta = avg_time_per_game * remaining
+        eta_str = f"{int(eta//60)}m {int(eta%60)}s" if eta >= 60 else f"{int(eta)}s"
+    else:
+        eta_str = "calculating..."
+    
+    # Progress bar
+    bar_length = 40
+    filled = int(bar_length * progress)
+    bar = '█' * filled + '░' * (bar_length - filled)
+    
+    # Win rate
+    win_rate = (wins / completed * 100) if completed > 0 else 0
+    
+    # Build progress line
+    progress_line = (
+        f"\r  [{bar}] {completed}/{total} games "
+        f"({progress*100:.1f}%) | "
+        f"W:{wins} L:{losses} D:{draws} ({win_rate:.1f}% wins) | "
+        f"Elapsed: {int(elapsed)}s | ETA: {eta_str}"
+    )
+    
+    # Print with carriage return to overwrite
+    sys.stdout.write(progress_line)
+    sys.stdout.flush()
 
 
 def run_test_suite(num_games: int, opponent_type: OpponentType, 
@@ -329,14 +370,14 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     if num_workers is None:
         num_workers = cpu_count()
     
-    print(f"\n{'='*60}")
+    print(f"\n{'='*70}")
     print(f"Starting test suite:")
     print(f"  Games: {num_games}")
     print(f"  Opponent: {opponent_type.value}")
     print(f"  Your color: {your_color}")
     print(f"  Search depth: {depth}")
     print(f"  CPU cores: {num_workers}")
-    print(f"{'='*60}\n")
+    print(f"{'='*70}\n")
     
     # Prepare game configurations
     game_configs = []
@@ -349,9 +390,43 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     
     start_time = time.time()
     
-    # Run games in parallel
-    with Pool(processes=num_workers) as pool:
-        results = pool.map(play_single_game, game_configs)
+    # Use Manager for shared progress tracking
+    with Manager() as manager:
+        progress_dict = manager.dict()
+        progress_dict['completed'] = 0
+        lock = manager.Lock()
+        
+        # Add progress tracking to game configs
+        game_configs_with_progress = [
+            (*config, progress_dict, lock) for config in game_configs
+        ]
+        
+        # Determine update frequency (update every 2% or minimum 1 game)
+        update_interval = max(1, num_games // 50)
+        
+        results = []
+        last_update = 0
+        
+        print("  Progress:")
+        
+        # Run games in parallel with progress tracking
+        with Pool(processes=num_workers) as pool:
+            # Use imap_unordered for better progress tracking
+            for result in pool.imap_unordered(play_single_game, game_configs_with_progress):
+                results.append(result)
+                completed = len(results)
+                
+                # Update progress bar at intervals
+                if completed - last_update >= update_interval or completed == num_games:
+                    wins = sum(1 for r in results if r.result == 'win')
+                    losses = sum(1 for r in results if r.result == 'loss')
+                    draws = sum(1 for r in results if r.result == 'draw')
+                    
+                    print_progress(completed, num_games, start_time, wins, losses, draws)
+                    last_update = completed
+    
+    # Final newline after progress bar
+    print("\n")
     
     end_time = time.time()
     total_time = end_time - start_time
@@ -362,9 +437,9 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     draws = sum(1 for r in results if r.result == 'draw')
     win_rate = (wins / num_games * 100) if num_games > 0 else 0
     
-    print(f"\n{'='*60}")
+    print(f"{'='*70}")
     print(f"Testing Complete!")
-    print(f"{'='*60}")
+    print(f"{'='*70}")
     print(f"Results:")
     print(f"  Wins:      {wins:4d} ({wins/num_games*100:5.1f}%)")
     print(f"  Losses:    {losses:4d} ({losses/num_games*100:5.1f}%)")
@@ -374,7 +449,7 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     print(f"  Total time:   {total_time:.1f}s")
     print(f"  Games/sec:    {num_games/total_time:.2f}")
     print(f"  Avg game:     {total_time/num_games:.2f}s")
-    print(f"{'='*60}\n")
+    print(f"{'='*70}\n")
     
     return results
 
@@ -427,14 +502,14 @@ if __name__ == "__main__":
     print("Chess AI Testing Tool")
     print("=====================\n")
     
-    # Quick test: 1000 games vs MATERIAL opponent
-    print("Running quick test: 1000 games vs material opponent...")
+    # Quick test: 10 games vs random opponent
+    print("Running quick test: 10 games vs random opponent...")
     results = run_test_suite(
-        num_games=1000,
-        opponent_type=OpponentType.MATERIAL,
+        num_games=10,
+        opponent_type=OpponentType.RANDOM,
         your_color='both',
-        depth=4,
-        num_workers=8
+        depth=2,
+        num_workers=4
     )
     
     # Export results
