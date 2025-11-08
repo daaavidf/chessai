@@ -95,8 +95,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>♟️ Chess vs Random AI</h1>
-        <div class="info">You play as White</div>
+        <h1>♟️ Chess vs Smart AI</h1>
+        <div class="info">You play as White - AI uses Minimax algorithm</div>
         
         <div id="myBoard"></div>
         
@@ -156,24 +156,213 @@
             document.getElementById('moveHistory').textContent = moveHistory.join(', ');
         }
 
-        // Function to make a random AI move
-        function makeRandomMove() {
+        // Piece values for evaluation
+        const pieceValues = {
+            'p': 100,   // Pawn
+            'n': 320,   // Knight
+            'b': 330,   // Bishop
+            'r': 500,   // Rook
+            'q': 900,   // Queen
+            'k': 20000  // King
+        };
+
+        // Piece-square tables for positional evaluation
+        // Higher values mean better positions for that piece
+        const pawnTable = [
+            0,  0,  0,  0,  0,  0,  0,  0,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            10, 10, 20, 30, 30, 20, 10, 10,
+            5,  5, 10, 25, 25, 10,  5,  5,
+            0,  0,  0, 20, 20,  0,  0,  0,
+            5, -5,-10,  0,  0,-10, -5,  5,
+            5, 10, 10,-20,-20, 10, 10,  5,
+            0,  0,  0,  0,  0,  0,  0,  0
+        ];
+
+        const knightTable = [
+            -50,-40,-30,-30,-30,-30,-40,-50,
+            -40,-20,  0,  0,  0,  0,-20,-40,
+            -30,  0, 10, 15, 15, 10,  0,-30,
+            -30,  5, 15, 20, 20, 15,  5,-30,
+            -30,  0, 15, 20, 20, 15,  0,-30,
+            -30,  5, 10, 15, 15, 10,  5,-30,
+            -40,-20,  0,  5,  5,  0,-20,-40,
+            -50,-40,-30,-30,-30,-30,-40,-50
+        ];
+
+        const bishopTable = [
+            -20,-10,-10,-10,-10,-10,-10,-20,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  5, 10, 10,  5,  0,-10,
+            -10,  5,  5, 10, 10,  5,  5,-10,
+            -10,  0, 10, 10, 10, 10,  0,-10,
+            -10, 10, 10, 10, 10, 10, 10,-10,
+            -10,  5,  0,  0,  0,  0,  5,-10,
+            -20,-10,-10,-10,-10,-10,-10,-20
+        ];
+
+        const rookTable = [
+            0,  0,  0,  0,  0,  0,  0,  0,
+            5, 10, 10, 10, 10, 10, 10,  5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            0,  0,  0,  5,  5,  0,  0,  0
+        ];
+
+        const queenTable = [
+            -20,-10,-10, -5, -5,-10,-10,-20,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  5,  5,  5,  5,  0,-10,
+            -5,  0,  5,  5,  5,  5,  0, -5,
+            0,  0,  5,  5,  5,  5,  0, -5,
+            -10,  5,  5,  5,  5,  5,  0,-10,
+            -10,  0,  5,  0,  0,  0,  0,-10,
+            -20,-10,-10, -5, -5,-10,-10,-20
+        ];
+
+        const kingTable = [
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -20,-30,-30,-40,-40,-30,-30,-20,
+            -10,-20,-20,-20,-20,-20,-20,-10,
+            20, 20,  0,  0,  0,  0, 20, 20,
+            20, 30, 10,  0,  0, 10, 30, 20
+        ];
+
+        // Get piece-square table for a piece
+        function getPieceSquareTable(piece) {
+            const tables = {
+                'p': pawnTable,
+                'n': knightTable,
+                'b': bishopTable,
+                'r': rookTable,
+                'q': queenTable,
+                'k': kingTable
+            };
+            return tables[piece.toLowerCase()];
+        }
+
+        // Evaluate the board position
+        function evaluateBoard() {
+            let totalEvaluation = 0;
+            
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const square = String.fromCharCode(97 + j) + (8 - i);
+                    const piece = game.get(square);
+                    
+                    if (piece) {
+                        const absoluteValue = getPieceValue(piece, i, j);
+                        totalEvaluation += piece.color === 'w' ? absoluteValue : -absoluteValue;
+                    }
+                }
+            }
+            
+            return totalEvaluation;
+        }
+
+        // Get the value of a piece at a specific position
+        function getPieceValue(piece, x, y) {
+            const pieceType = piece.type;
+            const pieceValue = pieceValues[pieceType];
+            
+            let squareIndex = x * 8 + y;
+            
+            // Flip the table for black pieces
+            if (piece.color === 'b') {
+                squareIndex = (7 - x) * 8 + y;
+            }
+            
+            const table = getPieceSquareTable(pieceType);
+            const positionValue = table[squareIndex];
+            
+            return pieceValue + positionValue;
+        }
+
+        // Minimax algorithm with alpha-beta pruning
+        function minimax(depth, alpha, beta, isMaximizingPlayer) {
+            if (depth === 0) {
+                return evaluateBoard();
+            }
+
+            const possibleMoves = game.moves();
+
+            if (isMaximizingPlayer) {
+                let maxEval = -Infinity;
+                for (const move of possibleMoves) {
+                    game.move(move);
+                    const evaluation = minimax(depth - 1, alpha, beta, false);
+                    game.undo();
+                    maxEval = Math.max(maxEval, evaluation);
+                    alpha = Math.max(alpha, evaluation);
+                    if (beta <= alpha) {
+                        break; // Beta cutoff
+                    }
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (const move of possibleMoves) {
+                    game.move(move);
+                    const evaluation = minimax(depth - 1, alpha, beta, true);
+                    game.undo();
+                    minEval = Math.min(minEval, evaluation);
+                    beta = Math.min(beta, evaluation);
+                    if (beta <= alpha) {
+                        break; // Alpha cutoff
+                    }
+                }
+                return minEval;
+            }
+        }
+
+        // Find the best move for the AI
+        function getBestMove(depth = 3) {
+            const possibleMoves = game.moves();
+            let bestMove = null;
+            let bestValue = Infinity; // Black wants to minimize (negative scores)
+
+            for (const move of possibleMoves) {
+                game.move(move);
+                const boardValue = minimax(depth - 1, -Infinity, Infinity, true);
+                game.undo();
+
+                if (boardValue < bestValue) {
+                    bestValue = boardValue;
+                    bestMove = move;
+                }
+            }
+
+            return bestMove;
+        }
+
+        // Function to make the best AI move
+        function makeAIMove() {
             const possibleMoves = game.moves();
             
             // Game over, no more moves
             if (possibleMoves.length === 0) return;
 
-            // Pick a random move
-            const randomIdx = Math.floor(Math.random() * possibleMoves.length);
-            const move = possibleMoves[randomIdx];
-            
-            // Make the move
-            game.move(move);
-            moveHistory.push(move);
-            
-            // Update the board
-            board.position(game.fen());
-            updateStatus();
+            // Show "thinking" status
+            document.getElementById('status').textContent = 'AI is thinking...';
+
+            // Use setTimeout to not freeze the UI
+            setTimeout(() => {
+                const bestMove = getBestMove(3); // Depth of 3 moves ahead
+                
+                // Make the move
+                game.move(bestMove);
+                moveHistory.push(bestMove);
+                
+                // Update the board
+                board.position(game.fen());
+                updateStatus();
+            }, 100);
         }
 
         // Called when user drops a piece
@@ -198,7 +387,7 @@
             updateStatus();
 
             // Make AI move after a short delay
-            window.setTimeout(makeRandomMove, 500);
+            window.setTimeout(makeAIMove, 500);
         }
 
         // Only allow user to pick up white pieces

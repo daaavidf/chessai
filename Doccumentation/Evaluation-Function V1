@@ -1,0 +1,33 @@
+I'll add a proper evaluation function that makes the AI pick the best move instead of random ones!Chess Game with Random AIInteractive artifact ∙ Version 2 Perfect! I've upgraded your chess AI to use a proper evaluation function. Here's what I added:
+Key Improvements:
+1. Evaluation Function
+The AI now evaluates positions based on:
+
+Material value: Pawns=100, Knights=320, Bishops=330, Rooks=500, Queens=900, Kings=20000
+Piece positioning: Using piece-square tables that reward good piece placement (e.g., knights in the center, pawns advancing)
+
+2. Minimax Algorithm
+The AI now looks 3 moves ahead and uses the minimax algorithm to:
+
+Maximize its own position
+Minimize your position
+Consider all possible move sequences
+
+3. Alpha-Beta Pruning
+This optimization makes the AI search much faster by eliminating branches that won't affect the final decision.
+How It Works:
+
+Material counting: The AI knows a queen is worth more than a pawn
+Positional awareness: Knights are better in the center, pawns should advance, etc.
+Strategic thinking: It looks 3 moves ahead to find the best sequence
+Tactical awareness: It can spot opportunities to capture pieces or create threats
+
+Performance:
+The AI now plays at a beginner-to-intermediate level and will:
+
+✅ Capture undefended pieces
+✅ Develop pieces properly
+✅ Avoid blunders (mostly)
+✅ Create basic tactical threats
+
+The depth is set to 3 (looks 3 moves ahead). You can increase it for stronger play, but it will think longer. Try playing against it now - it should be much more challenging!

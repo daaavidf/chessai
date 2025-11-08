@@ -1,0 +1,47 @@
+Perfect! I've created a complete chess game for you. Here's how to set it up in your Visual Studio project:
+How to Use This:
+
+In Visual Studio:
+
+Create a new file called index.html in your GitHub project folder
+Copy the code from the artifact above into this file
+Save it
+
+
+To run it:
+
+Right-click on index.html in Visual Studio
+Select "Open in Browser" or just double-click the file in your file explorer
+The game will open in your web browser!
+
+
+
+How It Works:
+Chess.js handles all the game logic:
+
+Tracks legal moves
+Checks for checkmate, stalemate, etc.
+Validates moves
+
+Chessboard.js handles the visualization:
+
+Shows the chess pieces
+Allows drag-and-drop
+Updates the board display
+
+The AI (in the makeRandomMove function):
+
+Gets all legal moves with game.moves()
+Picks one randomly
+Makes that move
+
+Features included:
+
+✅ Play as White against a random AI (Black)
+✅ Drag and drop pieces
+✅ Shows game status (check, checkmate, etc.)
+✅ Move history display
+✅ New Game button
+✅ Undo button (takes back both your move and AI's move)
+
+Try it out! You'll see the AI isn't very smart (it just picks random moves), but it's a great starting point. Later, you could improve it by adding move evaluation to make it play better.
