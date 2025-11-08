@@ -322,7 +322,7 @@
         }
 
         // Find the best move for the AI
-        function getBestMove(depth = 3) {
+        function getBestMove(depth = 5) {
             const possibleMoves = game.moves();
             let bestMove = null;
             let bestValue = Infinity; // Black wants to minimize (negative scores)
