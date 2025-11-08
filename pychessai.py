@@ -689,13 +689,13 @@ if __name__ == "__main__":
         print("\n" + "="*70)
         print("STOCKFISH TESTING")
         print("="*70)
-        print("\nRunning ELO calibration: 20 games vs Stockfish (ELO 1000)...")
+        print("\nRunning ELO calibration: 100 games vs Stockfish (ELO 1000)...")
         results = run_test_suite(
-            num_games=20,
+            num_games=200,
             opponent_type=OpponentType.STOCKFISH_ELO_1000,
             your_color='both',
             depth=3,
-            num_workers=4,
+            num_workers=8,
             stockfish_path=stockfish_path
         )
         export_to_csv(results, "stockfish_elo_1000_results.csv")
