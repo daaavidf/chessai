@@ -21,14 +21,19 @@ class OpponentType(Enum):
     RANDOM = "random"
     MATERIAL = "material"
     BASIC = "basic"
+    STOCKFISH_0 = "stockfish_level_0"
     STOCKFISH_1 = "stockfish_level_1"
+    STOCKFISH_3 = "stockfish_level_3"
     STOCKFISH_5 = "stockfish_level_5"
     STOCKFISH_10 = "stockfish_level_10"
-    STOCKFISH_ELO_800 = "stockfish_elo_800"
-    STOCKFISH_ELO_1000 = "stockfish_elo_1000"
-    STOCKFISH_ELO_1200 = "stockfish_elo_1200"
+    STOCKFISH_15 = "stockfish_level_15"
+    STOCKFISH_20 = "stockfish_level_20"
+    STOCKFISH_ELO_1320 = "stockfish_elo_1320"
     STOCKFISH_ELO_1500 = "stockfish_elo_1500"
+    STOCKFISH_ELO_1800 = "stockfish_elo_1800"
     STOCKFISH_ELO_2000 = "stockfish_elo_2000"
+    STOCKFISH_ELO_2200 = "stockfish_elo_2200"
+    STOCKFISH_ELO_2500 = "stockfish_elo_2500"
 
 
 @dataclass
@@ -299,19 +304,19 @@ def get_stockfish_move(board: chess.Board, opponent_type: OpponentType,
         engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
         
         # Configure Stockfish based on opponent type
-        if opponent_type == OpponentType.STOCKFISH_1:
-            engine.configure({"Skill Level": 0})
-            result = engine.play(board, chess.engine.Limit(time=time_limit))
-        elif opponent_type == OpponentType.STOCKFISH_5:
-            engine.configure({"Skill Level": 5})
-            result = engine.play(board, chess.engine.Limit(time=time_limit))
-        elif opponent_type == OpponentType.STOCKFISH_10:
-            engine.configure({"Skill Level": 10})
+        if opponent_type.value.startswith("stockfish_level"):
+            # Extract skill level (0-20)
+            level = int(opponent_type.value.split('_')[-1])
+            engine.configure({"Skill Level": level})
             result = engine.play(board, chess.engine.Limit(time=time_limit))
         elif "elo" in opponent_type.value:
-            # Extract ELO from opponent type
+            # Extract ELO from opponent type (minimum 1320)
             elo = int(opponent_type.value.split('_')[-1])
-            engine.configure({"UCI_LimitStrength": True, "UCI_Elo": elo})
+            if elo < 1320:
+                print(f"\nWarning: Stockfish minimum ELO is 1320, using level {elo//200} instead")
+                engine.configure({"Skill Level": min(20, elo // 200)})
+            else:
+                engine.configure({"UCI_LimitStrength": True, "UCI_Elo": elo})
             result = engine.play(board, chess.engine.Limit(time=time_limit))
         else:
             result = engine.play(board, chess.engine.Limit(time=time_limit))
@@ -689,43 +694,80 @@ if __name__ == "__main__":
         print("\n" + "="*70)
         print("STOCKFISH TESTING")
         print("="*70)
-        print("\nRunning ELO calibration: 100 games vs Stockfish (ELO 1000)...")
+        print("\nRunning calibration: 20 games vs Stockfish Level 1 (~800-1000 ELO)...")
         results = run_test_suite(
-            num_games=200,
-            opponent_type=OpponentType.STOCKFISH_ELO_1000,
+            num_games=20,
+            opponent_type=OpponentType.STOCKFISH_1,
             your_color='both',
             depth=3,
-            num_workers=8,
+            num_workers=4,
             stockfish_path=stockfish_path
         )
-        export_to_csv(results, "stockfish_elo_1000_results.csv")
+        export_to_csv(results, "stockfish_level_1_results.csv")
+        
+        print("\nFor more accurate ELO testing, uncomment the sections below!")
     
     # More comprehensive tests (uncomment as needed):
     
-    # # Test vs Stockfish ELO 800
+    # # Test vs Stockfish Skill Levels (for sub-1320 ELO estimation)
+    # print("\nTesting against Stockfish Level 0 (weakest)...")
     # results = run_test_suite(
     #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_ELO_800,
+    #     opponent_type=OpponentType.STOCKFISH_0,
     #     your_color='both',
     #     depth=3
     # )
-    # export_to_csv(results, "stockfish_800_results.csv")
+    # export_to_csv(results, "stockfish_level_0_results.csv")
     
-    # # Test vs Stockfish ELO 1200
+    # print("\nTesting against Stockfish Level 3...")
     # results = run_test_suite(
     #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_ELO_1200,
+    #     opponent_type=OpponentType.STOCKFISH_3,
     #     your_color='both',
     #     depth=3
     # )
-    # export_to_csv(results, "stockfish_1200_results.csv")
+    # export_to_csv(results, "stockfish_level_3_results.csv")
     
-    # # Find your approximate ELO by testing multiple levels
+    # # Test vs Stockfish ELO (1320+)
+    # print("\nTesting against Stockfish ELO 1320...")
+    # results = run_test_suite(
+    #     num_games=50,
+    #     opponent_type=OpponentType.STOCKFISH_ELO_1320,
+    #     your_color='both',
+    #     depth=3
+    # )
+    # export_to_csv(results, "stockfish_elo_1320_results.csv")
+    
+    # # Test vs higher ELOs
+    # print("\nTesting against Stockfish ELO 1500...")
+    # results = run_test_suite(
+    #     num_games=50,
+    #     opponent_type=OpponentType.STOCKFISH_ELO_1500,
+    #     your_color='both',
+    #     depth=3
+    # )
+    # export_to_csv(results, "stockfish_1500_results.csv")
+    
+    # # Comprehensive ladder test
     # print("\n" + "="*70)
-    # print("COMPREHENSIVE ELO TESTING")
+    # print("COMPREHENSIVE ELO LADDER TEST")
     # print("="*70)
+    # print("\nTesting against multiple skill levels to find your ELO...")
     # 
-    # for elo in [800, 1000, 1200, 1500]:
+    # # Test skill levels 0, 1, 3, 5, 10 (roughly 600-1200 ELO)
+    # for level in [0, 1, 3, 5, 10]:
+    #     opponent = OpponentType[f"STOCKFISH_{level}"]
+    #     print(f"\nTesting against Skill Level {level}...")
+    #     results = run_test_suite(
+    #         num_games=30,
+    #         opponent_type=opponent,
+    #         your_color='both',
+    #         depth=3
+    #     )
+    #     export_to_csv(results, f"skill_level_{level}_test.csv")
+    # 
+    # # If doing well, test actual ELO ratings
+    # for elo in [1320, 1500, 1800]:
     #     opponent = OpponentType[f"STOCKFISH_ELO_{elo}"]
     #     print(f"\nTesting against ELO {elo}...")
     #     results = run_test_suite(
