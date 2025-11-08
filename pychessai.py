@@ -694,9 +694,9 @@ if __name__ == "__main__":
         print("\n" + "="*70)
         print("STOCKFISH TESTING")
         print("="*70)
-        print("\nRunning calibration: 20 games vs Stockfish Level 1 (~800-1000 ELO)...")
+        print("\nRunning calibration: 50 games vs Stockfish Level 1 (~800-1000 ELO)...")
         results = run_test_suite(
-            num_games=20,
+            num_games=50,
             opponent_type=OpponentType.STOCKFISH_1,
             your_color='both',
             depth=3,
@@ -704,8 +704,6 @@ if __name__ == "__main__":
             stockfish_path=stockfish_path
         )
         export_to_csv(results, "stockfish_level_1_results.csv")
-        
-        print("\nFor more accurate ELO testing, uncomment the sections below!")
     
     # More comprehensive tests (uncomment as needed):
     

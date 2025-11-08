@@ -1,26 +1,10 @@
 [Event "AI Testing Match"]
-[Round "2"]
-[White "random"]
-[Black "Your AI"]
-[Result "0-1"]
-
-d4 e5 h4 Nc6 Na3 Bxa3 bxa3 exd4 Bd2 Nf6 Bc3 dxc3 Qd6 cxd6 Rc1 Kf8 Rb1 Nd5 Kd1 Qf6 e4 Qd4+ Kc1 Qd2# 0-1
-
-[Event "AI Testing Match"]
-[Round "1"]
-[White "Your AI"]
-[Black "random"]
-[Result "1-0"]
-
-Nf3 Nh6 d4 c5 dxc5 e6 Bxh6 Qa5+ Nbd2 Rg8 Bxg7 d5 Bxf8 d4 Nxd4 Nc6 Nxc6 Rxg2 Nxa5 Rg3 hxg3 Kd8 Rxh7 a6 Rxf7 Ke8 Rf6 Rb8 Nac4 Ra8 Bd6 a5 Ne4 b5 cxb6 Rb8 Bxb8 Bb7 Rxe6+ Kf8 Bd6+ Kg7 Qd4+ Kf7 Re7+ Kg8 Qg7# 1-0
-
-[Event "AI Testing Match"]
 [Round "4"]
 [White "random"]
 [Black "Your AI"]
 [Result "0-1"]
 
-f4 e5 Na3 d5 c3 Qh4+ g3 Qf6 Nb1 exf4 c4 dxc4 Nh3 fxg3 Qc2 gxh2 Qg6 Qxg6 d3 cxd3 Rg1 hxg1=Q b4 Bxh3 a4 Qxf1+ Kd2 Qxe2+ Kc3 Qc2+ Kd4 Qxc1 b5 Qc5# 0-1
+h4 Nc6 a4 e5 a5 Nf6 g4 Nxg4 Ra2 Bd6 f4 exf4 a6 bxa6 Bh3 Qxh4+ Kf1 Qf2# 0-1
 
 [Event "AI Testing Match"]
 [Round "3"]
@@ -28,7 +12,7 @@ f4 e5 Na3 d5 c3 Qh4+ g3 Qf6 Nb1 exf4 c4 dxc4 Nh3 fxg3 Qc2 gxh2 Qg6 Qxg6 d3 cxd3 
 [Black "random"]
 [Result "1-0"]
 
-e4 a6 Nf3 d6 Nc3 Qd7 Bd3 Qh3 gxh3 g6 h4 h6 Nd4 e6 Kf1 c5 Nf3 c4 Bxc4 Bd7 Nd4 Ke7 Qf3 Ba4 Nxa4 f6 Bxe6 Bg7 Nc3 Nd7 Nd5+ Kd8 Bxd7 h5 Be6 Rc8 Bxc8 Bf8 Bxb7 Kd7 Bxa6 Nh6 Nxf6+ Kd8 Ne6+ Ke7 Nxf8 Rg8 Nxg8+ Kd8 Nxh6 d5 exd5 g5 hxg5 Ke8 Ne6 h4 Qf7# 1-0
+d4 e5 e4 Be7 dxe5 Bg5 Bxg5 a5 Bxd8 f6 Bxc7 d5 exd6 Ra7 Bxb8 g6 Bxa7 Kf8 Nf3 Bg4 Nc3 Be6 a3 Bc8 Bb6 Ke8 Bxa5 Bh3 gxh3 h5 Bb5+ Kf8 Bb6 f5 exf5 Nf6 fxg6 Ng8 Bd3 Ne7 dxe7+ Kg7 Ne5 Rg8 Qxh5 Rc8 Qh7+ Kf6 Nd7+ Ke6 e8=Q+ Rxe8 Qf7+ Kd6+ Qxe8 Kc6 Qe6# 1-0
 
 [Event "AI Testing Match"]
 [Round "5"]
@@ -36,7 +20,23 @@ e4 a6 Nf3 d6 Nc3 Qd7 Bd3 Qh3 gxh3 g6 h4 h6 Nd4 e6 Kf1 c5 Nf3 c4 Bxc4 Bd7 Nd4 Ke7
 [Black "random"]
 [Result "1-0"]
 
-Nf3 a6 d4 Ra7 Nc3 Nh6 Bxh6 e6 Be3 c6 Ne5 Qg5 Bxg5 a5 Be3 d5 Qd3 Ra8 O-O-O f5 Rd2 g5 Bxg5 f4 Bxf4 c5 dxc5 a4 Qb5+ Bd7 Qxb7 Ra5 Qxb8+ Ke7 Bg5# 1-0
+Nc3 e6 Nf3 h6 Ne5 Ne7 Ne4 d5 Nc5 Na6 Nxa6 Ng6 Nxg6 c5 Nxh8 h5 Nxf7 Qc7 Nxc7+ Kd7 Nxa8 Be7 Ne5+ Ke8 Nc7+ Kf8 Nb5 Kg8 Nxa7 d4 Nxc8 Kh8 Nxe7 h4 N7g6+ Kg8 Nxh4 Kh7 Nhf3 b6 Rg1 d3 Nxd3 Kg6 Nfe5+ Kh6 Nf4 g6 Nxe6 b5 Nxc5 Kg5 Ne4+ Kf4 Nxg6+ Kg4 Ne5+ Kh5 Nf3 Kh6 Ne5 Kh7 Rh1 Kg7 Rg1 Kg8 Rh1 Kh8 Rg1 Kh7 Rh1 Kh8 Rg1 Kh7 Rh1 Kh6 Rg1 Kh5 Nf3 b4 Ne5 b3 cxb3 Kh4 Qc2 Kh5 Qc7 Kh6 Qd6+ Kg7 Qc7+ Kg8 Qd6 Kg7 Qc7+ Kf8 Qf7# 1-0
+
+[Event "AI Testing Match"]
+[Round "2"]
+[White "random"]
+[Black "Your AI"]
+[Result "0-1"]
+
+g3 e5 b4 Nc6 h4 Bxb4 c3 Bd6 Bg2 e4 c4 Nf6 Qb3 Kf8 d3 Ne5 Bf4 Nxd3+ Kd1 Nxf2+ Ke1 Nxh1 Qd3 exd3 g4 Bxf4 g5 Bg3+ Kd1 Nf2+ Kc1 Bf4+ Nd2 Bxd2+ Kxd2 N6g4 g6 dxe2 Re1 Qxh4 Kc3 Qf6+ Kb3 Qb6+ Kc2 Qxg6+ Kc3 Qf6+ Kb3 Qb6+ Kc3 Qf6+ Kc2 Ne3+ Kb1 Nxg2 Kc1 Nxe1 Nh3 Nxh3 Kb1 Nf4 a3 Ned3 Kc2 Qb2# 0-1
+
+[Event "AI Testing Match"]
+[Round "1"]
+[White "Your AI"]
+[Black "random"]
+[Result "1-0"]
+
+Nf3 a6 d4 b6 Nc3 Ra7 Be3 e5 Nxe5 Be7 Nd5 Kf8 Qd3 Nf6 Nxe7 h6 Nxc8 Ne4 Nxa7 Ke7 Qxe4 Qf8 Qh4+ Kd6 Nc4+ Ke6 Qe4+ Kf6 Qe5+ Kg6 Qxc7 d6 Qxb6 Kf5 Qa5+ Ke6 d5+ Ke7 Qc7+ Kf6 Bd4+ Kf5 Ne3+ Kg6 O-O-O Kh5 Rd2 a5 Qxa5 Qe8 g4+ Kg5 h4+ Kg6 h5+ Kg5 Nf5 Qe3 Nxe3 Nd7 Bxg7 Rh7 Bd4 Nb8 Nb5 f6 Nxd6 Nd7 Ne4+ Kf4 Bg2 Nb8 Bxf6 Rb7 Qc5 Rf7 Qd6# 1-0
 
 [Event "AI Testing Match"]
 [Round "6"]
@@ -44,15 +44,7 @@ Nf3 a6 d4 Ra7 Nc3 Nh6 Bxh6 e6 Be3 c6 Ne5 Qg5 Bxg5 a5 Be3 d5 Qd3 Ra8 O-O-O f5 Rd2
 [Black "Your AI"]
 [Result "0-1"]
 
-h4 e5 Nc3 Nc6 f3 Nf6 Ne4 Nxe4 f4 exf4 Rh3 Bd6 c3 Kf8 Qa4 Nxd2 Rh2 Nxf1 Qxa7 Rxa7 Rh3 Qf6 a4 Ne5 Ra2 Ng3 c4 Bb4+ Kd1 Qd6+ Bd2 Qxd2# 0-1
-
-[Event "AI Testing Match"]
-[Round "7"]
-[White "Your AI"]
-[Black "random"]
-[Result "1-0"]
-
-d4 Na6 e4 Nf6 Bxa6 g6 Bd3 e5 dxe5 Bd6 exd6 Rg8 dxc7 d5 cxd8=Q+ Kxd8 exd5 a6 Bg5 Rb8 Bxf6+ Kd7 Nf3 Rh8 Bxh8 Kc7 Be5+ Kb6 Bxb8 Be6 dxe6 a5 exf7 Kc6 f8=Q Kb6 Qd6# 1-0
+b4 e5 g3 Nc6 a4 Bxb4 Nf3 e4 Ne5 Nxe5 a5 Nf6 Na3 Bxa5 f3 exf3 Bh3 fxe2 Bf1 exd1=Q+ Kxd1 Kf8 Ra2 Nd5 Ba6 bxa6 g4 Nxg4 Bb2 Nf2+ Ke2 Nxh1 c3 Qe7+ Kd3 Nf2+ Kc4 Qe4+ d4 Ne3+ Kb3 Rb8+ Nb5 Rxb5+ Ka3 Nd3 h3 Bb7 c4 Nxc4+ Ka4 Rb4# 0-1
 
 [Event "AI Testing Match"]
 [Round "8"]
@@ -60,15 +52,15 @@ d4 Na6 e4 Nf6 Bxa6 g6 Bd3 e5 dxe5 Bd6 exd6 Rg8 dxc7 d5 cxd8=Q+ Kxd8 exd5 a6 Bg5 
 [Black "Your AI"]
 [Result "0-1"]
 
-h4 e5 Nf3 Nf6 d3 Bb4+ Nfd2 Nc6 f3 Kf8 d4 Nxd4 Rh2 Nd5 g4 Qf6 Na3 Bxa3 bxa3 Rg8 Rh3 Rh8 c4 Nf4 Rg3 Qxh4 Qb3 Nxb3 Kd1 Nxa1 c5 Qxg3 e3 Nd5 Bd3 Nc3# 0-1
+a3 Nf6 Nc3 e5 e4 Nc6 d3 Bd6 Qg4 Nxg4 b4 Kf8 Ra2 Qf6 Bd2 Qxf2+ Kd1 Qxf1+ Be1 Qxg2 Ra1 Qxh1 Kc1 Qxg1 a4 Qxe1+ Nd1 Nxh2 c3 Nf3 Kc2 Qe2+ Kc1 Qxd3 c4 Qxe4 b5 Qxc4+ Nc3 Qxc3+ Kb1 Ncd4 b6 Qc2# 0-1
 
 [Event "AI Testing Match"]
-[Round "10"]
-[White "random"]
-[Black "Your AI"]
-[Result "0-1"]
+[Round "7"]
+[White "Your AI"]
+[Black "random"]
+[Result "1-0"]
 
-f3 d5 a3 Nc6 Nh3 Bxh3 Ra2 Be6 g4 Nf6 Rg1 Qd6 a4 Qxh2 d4 Qxg1 b4 Nxb4 f4 Nxa2 Ba3 Qg3+ Kd2 Ne4# 0-1
+Nf3 d5 e4 Nf6 exd5 Nc6 dxc6 Bd7 cxd7+ Nxd7 Nc3 g6 Bb5 a5 Ne5 Bh6 Bxd7+ Qxd7 Nxd7 Bg5 Ne5 f6 Nc4 h6 Nd5 Rb8 Nxc7+ Kf8 Ne6+ Kf7 Nxg5+ Kg8 Ne4 g5 Nxa5 b6 Nc4 Rf8 Nxb6 g4 Qxg4+ Kh7 Qf5+ Kg7 Nd5 Rfg8 Nxe7 Kf7 Nxg8 Rxg8 Qxf6+ Ke8 Nd6+ Kd7 Qxh6 Rb8 Qf6 Rf8 Qxf8 Kc6 Qf6 Kd7 Kf1 Kc6 Ne4+ Kb7 Qe6 Kc7 Qf6 Kb8 Qe6 Kb7 Qf6 Ka7 Qc6 Kb8 Qf6 Kc8 Qb6 Kd7 Qc5 Ke6 Qc7 Kf5 Qc6 Ke5 Qc4 Kf5 Nd6+ Kf6 Ne4+ Kf5 Nd6+ Kg5 Qe4 Kh5 Nf5 Kg6 Nd4+ Kg5 Rg1 Kf6 Qe6+ Kg7 Qd6 Kh8 Qc7 Kg8 Qd6 Kf7 Qc7+ Kg6 Qd6+ Kh5 Qf4 Kg6 Qc7 Kh5 Qf4 Kg6 Qc7 Kh6 Qf7 Kg5 Qe7+ Kg6 Qc7 Kf6 Qd6+ Kg7 Qc7+ Kf8 Qd6+ Kg7 Qc7+ Kh8 Rh1 Kg8 Qd6 Kf7 Qc7+ Kf6 Qd6+ Kg7 Qc7+ Kh6 Qf7 Kg5 Qe7+ Kg4 Qf6 Kh5 Qf4 Kg6 Qc7 Kg5 Qe7+ Kf4 Qe6 Kg5 Qe4 Kf6 Qe6+ Kg5 Qe4 Kf6 Qe6+ Kg7 Qd6 Kh8 Qc7 Kg8 Qd6 Kg7 Qc7+ Kg6 Qd6+ Kf7 Qc7+ Kf6 Qd6+ Kg7 Qc7+ Kf6 Qd6+ Kf7 Qc7+ Kg6 Qd6+ Kg7 Qc7+ Kh6 Qf7 Kg5 Qe7+ Kh5 Qf6 Kg4 Rg1 Kh5 g4# 1-0
 
 [Event "AI Testing Match"]
 [Round "9"]
@@ -76,5 +68,13 @@ f3 d5 a3 Nc6 Nh3 Bxh3 Ra2 Be6 g4 Nf6 Rg1 Qd6 a4 Qxh2 d4 Qxg1 b4 Nxb4 f4 Nxa2 Ba3
 [Black "random"]
 [Result "1-0"]
 
-e4 g6 d4 Bh6 Bxh6 d5 Bb5+ Bd7 Bxd7+ Qxd7 Be3 Kd8 exd5 Qe6 dxe6 Nd7 exd7 Nh6 Bxh6 Rc8 dxc8=Q+ Kxc8 Nf3 Rd8 Nc3 c6 Be3 c5 Ne5 h5 Nxf7 cxd4 Nxd8 dxe3 fxe3 b5 Nxb5 e6 Nxe6 Kb7 Nbd4 Kc8 Kf2 a5 Qf3 h4 Qc6+ Kb8 Nc5 a4 Qb7# 1-0
+Nc3 a6 Nf3 Nh6 Ne5 Ra7 Nd5 b6 Rg1 Ra8 Rh1 Ng8 Rg1 f5 Rh1 a5 Rg1 Ra6 Rh1 h5 Rg1 h4 Rh1 Ra7 Rg1 Ba6 Rh1 Qc8 Rg1 Rh5 Rh1 Bb7 Nf4 Rh8 Nfd3 Bd5 Nf4 Qa6 Nxd5 a4 Rg1 Rh7 Rh1 g6 Nxg6 Qd3 exd3 f4 Ngxf4 h3 gxh3 Rf7 Qh5 Nf6 Nxf6+ exf6 Qe2+ Be7 Bg2 Kd8 Bd5 Rg7 Kf1 f5 Qe5 c6 Qxb8# 1-0
+
+[Event "AI Testing Match"]
+[Round "10"]
+[White "random"]
+[Black "Your AI"]
+[Result "0-1"]
+
+f4 Nc6 e3 d5 a3 Nf6 Ke2 Be6 f5 Bxf5 d4 Qd6 b3 Ne4 c3 O-O-O Kf3 Ng5+ Kf2 Ne4+ Ke1 Rd7 Ra2 Be6 g3 Rg8 Bb2 Rh8 a4 Rg8 Be2 Rh8 Na3 Rg8 Qa1 Rh8 Nc4 dxc4 Ra3 cxb3 Ra2 bxa2 a5 Nxa5 c4 Qb4+ Kf1 Nd2+ Kf2 Ne4+ Kg2 Nc6 Ba3 Qxa3 h3 Qxe3 Nf3 Qf2# 0-1
 
