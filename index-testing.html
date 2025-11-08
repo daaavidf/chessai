@@ -267,7 +267,28 @@
                     
                     <label style="display: block; margin-bottom: 10px;">
                         Number of games:
-                        <input type="number" class="opponent-select" id="numGames" value="10" min="1" max="100">
+                        <input type="number" class="opponent-select" id="numGames" value="10" min="1" max="1000">
+                    </label>
+                    
+                    <label style="display: block; margin-bottom: 10px;">
+                        AI Search Depth: <span id="depthValue">2</span>
+                        <input type="range" class="opponent-select" id="depthSlider" min="1" max="4" value="2" step="1">
+                        <small style="color: #666; display: block;">Lower = faster, Higher = stronger</small>
+                    </label>
+                    
+                    <label style="display: block; margin-bottom: 10px;">
+                        <input type="checkbox" id="parallelMode" checked> 
+                        <strong>Batch Processing</strong> (process multiple games)
+                    </label>
+                    
+                    <label style="display: block; margin-bottom: 10px;">
+                        Batch size: <span id="parallelValue">2</span>
+                        <input type="range" class="opponent-select" id="parallelSlider" min="1" max="8" value="2" step="1">
+                    </label>
+                    
+                    <label style="display: block; margin-bottom: 10px;">
+                        <input type="checkbox" id="visualMode"> 
+                        Show board updates (much slower)
                     </label>
                 </div>
                 
@@ -369,6 +390,11 @@
         };
         
         let gameHistory = [];
+        let showVisuals = false;
+        let parallelGames = 2;
+        let gamesCompleted = 0;
+        let moveCache = new Map(); // Cache for evaluated positions
+        let searchDepth = 2; // Adjustable search depth
         
         // Piece values
         const pieceValues = {
@@ -580,14 +606,13 @@
             }
         }
 
-        async function playGame(yourAIColor, opponentType) {
-            game.reset();
-            board.position('start');
-            
+        async function playGame(yourAIColor, opponentType, gameNumber) {
+            const localGame = new Chess();
             const moves = [];
             const yourAI = yourAIColor;
+            let moveCount = 0;
             
-            while (!game.game_over()) {
+            while (!localGame.game_over()) {
                 if (testingPaused) {
                     await new Promise(resolve => {
                         const checkPause = setInterval(() => {
@@ -601,28 +626,36 @@
                 
                 if (!testingInProgress) return null;
                 
-                const currentTurn = game.turn() === 'w' ? 'white' : 'black';
+                const currentTurn = localGame.turn() === 'w' ? 'white' : 'black';
                 let move;
                 
+                // Yield to UI every 5 moves to prevent freezing
+                if (moveCount % 5 === 0) {
+                    await sleep(0); // Yield to event loop
+                }
+                moveCount++;
+                
                 if (currentTurn === yourAI) {
-                    move = getBestMove(3, true);
-                    updateStatus(`Your AI (${yourAI}) thinking...`);
+                    move = getBestMoveForGame(localGame, searchDepth, true);
                 } else {
-                    move = getOpponentMove(opponentType);
-                    updateStatus(`Opponent thinking...`);
+                    move = getOpponentMoveForGame(localGame, opponentType);
                 }
                 
                 if (move) {
-                    const moveObj = game.move(move);
+                    const moveObj = localGame.move(move);
                     moves.push(moveObj.san);
-                    board.position(game.fen());
-                    await sleep(moveDelay);
+                    
+                    // Only update board visually if in visual mode and this is the "main" game
+                    if (showVisuals && gameNumber === currentGameNumber) {
+                        board.position(localGame.fen());
+                        await sleep(Math.max(moveDelay, 10));
+                    }
                 }
             }
             
             let result;
-            if (game.in_checkmate()) {
-                const winner = game.turn() === 'w' ? 'black' : 'white';
+            if (localGame.in_checkmate()) {
+                const winner = localGame.turn() === 'w' ? 'black' : 'white';
                 result = winner === yourAI ? 'win' : 'loss';
             } else {
                 result = 'draw';
@@ -631,55 +664,250 @@
             return {
                 result: result,
                 moves: moves,
-                pgn: game.pgn(),
+                pgn: localGame.pgn(),
                 yourColor: yourAI,
-                opponentType: opponentType
+                opponentType: opponentType,
+                gameNumber: gameNumber
             };
+        }
+
+        function getBestMoveForGame(gameInstance, depth = 3, usePositional = true) {
+            const possibleMoves = gameInstance.moves();
+            if (possibleMoves.length === 0) return null;
+            
+            // Opening book moves for faster early game
+            if (gameInstance.history().length < 4) {
+                const openingMoves = ['e4', 'e5', 'd4', 'd5', 'Nf3', 'Nc3', 'Nc6', 'Nf6'];
+                const validOpening = possibleMoves.filter(m => openingMoves.includes(m));
+                if (validOpening.length > 0) {
+                    return validOpening[Math.floor(Math.random() * validOpening.length)];
+                }
+            }
+            
+            let bestMove = null;
+            let bestValue = gameInstance.turn() === 'w' ? -Infinity : Infinity;
+            
+            // Move ordering: prioritize captures and checks for better pruning
+            const orderedMoves = possibleMoves.sort((a, b) => {
+                const scoreA = a.includes('x') ? 100 : (a.includes('+') ? 50 : 0);
+                const scoreB = b.includes('x') ? 100 : (b.includes('+') ? 50 : 0);
+                return scoreB - scoreA;
+            });
+
+            for (const move of orderedMoves) {
+                gameInstance.move(move);
+                const boardValue = usePositional ? 
+                    minimaxForGame(gameInstance, depth - 1, -Infinity, Infinity, gameInstance.turn() === 'w') :
+                    evaluateMaterialForGame(gameInstance);
+                gameInstance.undo();
+
+                if (gameInstance.turn() === 'w') {
+                    if (boardValue > bestValue) {
+                        bestValue = boardValue;
+                        bestMove = move;
+                    }
+                } else {
+                    if (boardValue < bestValue) {
+                        bestValue = boardValue;
+                        bestMove = move;
+                    }
+                }
+            }
+
+            return bestMove || possibleMoves[0];
+        }
+
+        function minimaxForGame(gameInstance, depth, alpha, beta, isMaximizingPlayer) {
+            if (depth === 0) {
+                return evaluateBoardForGame(gameInstance);
+            }
+
+            const possibleMoves = gameInstance.moves();
+
+            if (isMaximizingPlayer) {
+                let maxEval = -Infinity;
+                for (const move of possibleMoves) {
+                    gameInstance.move(move);
+                    const evaluation = minimaxForGame(gameInstance, depth - 1, alpha, beta, false);
+                    gameInstance.undo();
+                    maxEval = Math.max(maxEval, evaluation);
+                    alpha = Math.max(alpha, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (const move of possibleMoves) {
+                    gameInstance.move(move);
+                    const evaluation = minimaxForGame(gameInstance, depth - 1, alpha, beta, true);
+                    gameInstance.undo();
+                    minEval = Math.min(minEval, evaluation);
+                    beta = Math.min(beta, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return minEval;
+            }
+        }
+
+        function evaluateBoardForGame(gameInstance) {
+            let totalEvaluation = 0;
+            
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const square = String.fromCharCode(97 + j) + (8 - i);
+                    const piece = gameInstance.get(square);
+                    
+                    if (piece) {
+                        const absoluteValue = getPieceValue(piece, i, j);
+                        totalEvaluation += piece.color === 'w' ? absoluteValue : -absoluteValue;
+                    }
+                }
+            }
+            
+            return totalEvaluation;
+        }
+
+        function evaluateMaterialForGame(gameInstance) {
+            let totalEvaluation = 0;
+            
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const square = String.fromCharCode(97 + j) + (8 - i);
+                    const piece = gameInstance.get(square);
+                    
+                    if (piece) {
+                        const pieceValue = pieceValues[piece.type];
+                        totalEvaluation += piece.color === 'w' ? pieceValue : -pieceValue;
+                    }
+                }
+            }
+            
+            return totalEvaluation;
+        }
+
+        function getOpponentMoveForGame(gameInstance, opponentType) {
+            const possibleMoves = gameInstance.moves();
+            
+            switch(opponentType) {
+                case 'random':
+                    const randomIdx = Math.floor(Math.random() * possibleMoves.length);
+                    return possibleMoves[randomIdx];
+                case 'material':
+                    return getBestMoveForGame(gameInstance, 1, false);
+                case 'basic':
+                    return getBestMoveForGame(gameInstance, searchDepth, true);
+                default:
+                    const idx = Math.floor(Math.random() * possibleMoves.length);
+                    return possibleMoves[idx];
+            }
         }
 
         async function runTestSuite() {
             const opponentType = document.getElementById('opponentSelect').value;
             const colorSelect = document.getElementById('colorSelect').value;
             totalGamesToPlay = parseInt(document.getElementById('numGames').value);
+            const useParallel = document.getElementById('parallelMode').checked;
+            showVisuals = document.getElementById('visualMode').checked;
             
             testingInProgress = true;
             currentGameNumber = 0;
+            gamesCompleted = 0;
+            
+            const startTime = Date.now();
             
             document.getElementById('startBtn').disabled = true;
             document.getElementById('pauseBtn').disabled = false;
             document.getElementById('stopBtn').disabled = false;
             
-            for (let i = 0; i < totalGamesToPlay; i++) {
-                if (!testingInProgress) break;
-                
-                currentGameNumber = i + 1;
-                
-                let yourColor;
-                if (colorSelect === 'both') {
-                    yourColor = (i % 2 === 0) ? 'white' : 'black';
-                } else {
-                    yourColor = colorSelect;
+            if (useParallel && !showVisuals) {
+                // Batch mode - process games in smaller batches with UI updates between
+                const gameBatches = [];
+                for (let i = 0; i < totalGamesToPlay; i++) {
+                    let yourColor;
+                    if (colorSelect === 'both') {
+                        yourColor = (i % 2 === 0) ? 'white' : 'black';
+                    } else {
+                        yourColor = colorSelect;
+                    }
+                    gameBatches.push({ yourColor, opponentType, gameNumber: i + 1 });
                 }
                 
-                updateStatus(`Playing game ${currentGameNumber}/${totalGamesToPlay} as ${yourColor}...`);
-                
-                const gameResult = await playGame(yourColor, opponentType);
-                
-                if (!gameResult) break;
-                
-                // Update statistics
-                stats.total++;
-                if (gameResult.result === 'win') stats.wins++;
-                else if (gameResult.result === 'loss') stats.losses++;
-                else stats.draws++;
-                
-                gameHistory.push(gameResult);
-                updateStatistics();
-                addLogEntry(gameResult);
+                // Process games in batches with UI updates between batches
+                for (let i = 0; i < gameBatches.length; i += parallelGames) {
+                    if (!testingInProgress) break;
+                    
+                    const batch = gameBatches.slice(i, i + parallelGames);
+                    currentGameNumber = i + 1;
+                    
+                    updateStatus(`Processing games ${i + 1}-${Math.min(i + parallelGames, totalGamesToPlay)} of ${totalGamesToPlay}...`);
+                    
+                    // Process batch sequentially but with better async handling
+                    for (const gameConfig of batch) {
+                        if (!testingInProgress) break;
+                        
+                        const gameResult = await playGame(gameConfig.yourColor, gameConfig.opponentType, gameConfig.gameNumber);
+                        
+                        if (!gameResult) continue;
+                        
+                        stats.total++;
+                        gamesCompleted++;
+                        if (gameResult.result === 'win') stats.wins++;
+                        else if (gameResult.result === 'loss') stats.losses++;
+                        else stats.draws++;
+                        
+                        gameHistory.push(gameResult);
+                    }
+                    
+                    // Update UI after each batch
+                    updateStatistics();
+                    if (batch.length > 0) {
+                        for (const gameResult of gameHistory.slice(-batch.length)) {
+                            addLogEntry(gameResult);
+                        }
+                    }
+                    
+                    // Yield to UI between batches
+                    await sleep(10);
+                }
+            } else {
+                // Sequential mode (for visual display or when parallel is disabled)
+                for (let i = 0; i < totalGamesToPlay; i++) {
+                    if (!testingInProgress) break;
+                    
+                    currentGameNumber = i + 1;
+                    
+                    let yourColor;
+                    if (colorSelect === 'both') {
+                        yourColor = (i % 2 === 0) ? 'white' : 'black';
+                    } else {
+                        yourColor = colorSelect;
+                    }
+                    
+                    updateStatus(`Playing game ${currentGameNumber}/${totalGamesToPlay} as ${yourColor}...`);
+                    
+                    const gameResult = await playGame(yourColor, opponentType, currentGameNumber);
+                    
+                    if (!gameResult) break;
+                    
+                    // Update statistics
+                    stats.total++;
+                    gamesCompleted++;
+                    if (gameResult.result === 'win') stats.wins++;
+                    else if (gameResult.result === 'loss') stats.losses++;
+                    else stats.draws++;
+                    
+                    gameHistory.push(gameResult);
+                    updateStatistics();
+                    addLogEntry(gameResult);
+                }
             }
             
+            const endTime = Date.now();
+            const totalSeconds = ((endTime - startTime) / 1000).toFixed(1);
+            const gamesPerSecond = (gamesCompleted / (totalSeconds / 1)).toFixed(2);
+            
             stopTesting();
-            updateStatus('Testing complete!');
+            updateStatus(`Testing complete! ${gamesCompleted} games in ${totalSeconds}s (${gamesPerSecond} games/sec)`);
         }
 
         function stopTesting() {
@@ -699,7 +927,7 @@
             const winRate = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
             document.getElementById('winRate').textContent = `Win Rate: ${winRate}%`;
             
-            const progress = totalGamesToPlay > 0 ? (currentGameNumber / totalGamesToPlay) * 100 : 0;
+            const progress = totalGamesToPlay > 0 ? (gamesCompleted / totalGamesToPlay) * 100 : 0;
             const progressBar = document.getElementById('progressBar');
             progressBar.style.width = progress + '%';
             progressBar.textContent = Math.round(progress) + '%';
@@ -830,6 +1058,30 @@
                 return;
             }
             exportToPGN();
+        });
+        
+        document.getElementById('parallelSlider').addEventListener('input', function() {
+            parallelGames = parseInt(this.value);
+            document.getElementById('parallelValue').textContent = parallelGames;
+        });
+        
+        document.getElementById('depthSlider').addEventListener('input', function() {
+            searchDepth = parseInt(this.value);
+            document.getElementById('depthValue').textContent = searchDepth;
+        });
+        
+        document.getElementById('parallelMode').addEventListener('change', function() {
+            const visualCheckbox = document.getElementById('visualMode');
+            if (this.checked) {
+                visualCheckbox.checked = false;
+            }
+        });
+        
+        document.getElementById('visualMode').addEventListener('change', function() {
+            const parallelCheckbox = document.getElementById('parallelMode');
+            if (this.checked) {
+                parallelCheckbox.checked = false;
+            }
         });
     </script>
 </body>
