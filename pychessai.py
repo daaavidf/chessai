@@ -427,14 +427,14 @@ if __name__ == "__main__":
     print("Chess AI Testing Tool")
     print("=====================\n")
     
-    # Quick test: 10 games vs random opponent
-    print("Running quick test: 10 games vs random opponent...")
+    # Quick test: 1000 games vs MATERIAL opponent
+    print("Running quick test: 1000 games vs material opponent...")
     results = run_test_suite(
-        num_games=10,
-        opponent_type=OpponentType.RANDOM,
+        num_games=1000,
+        opponent_type=OpponentType.MATERIAL,
         your_color='both',
-        depth=2,
-        num_workers=4
+        depth=4,
+        num_workers=8
     )
     
     # Export results
