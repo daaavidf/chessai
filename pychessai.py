@@ -700,7 +700,7 @@ if __name__ == "__main__":
             opponent_type=OpponentType.STOCKFISH_1,
             your_color='both',
             depth=3,
-            num_workers=4,
+            num_workers=8,
             stockfish_path=stockfish_path
         )
         export_to_csv(results, "stockfish_level_1_results.csv")
