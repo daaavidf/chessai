@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+
+# Node
+node_modules/
