@@ -5,10 +5,12 @@ Tests your chess AI against various opponents with parallel processing
 """
 
 import chess
+import chess.engine
 import time
 import random
 import csv
 import sys
+import os
 from multiprocessing import Pool, cpu_count, Manager
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
@@ -19,6 +21,14 @@ class OpponentType(Enum):
     RANDOM = "random"
     MATERIAL = "material"
     BASIC = "basic"
+    STOCKFISH_1 = "stockfish_level_1"
+    STOCKFISH_5 = "stockfish_level_5"
+    STOCKFISH_10 = "stockfish_level_10"
+    STOCKFISH_ELO_800 = "stockfish_elo_800"
+    STOCKFISH_ELO_1000 = "stockfish_elo_1000"
+    STOCKFISH_ELO_1200 = "stockfish_elo_1200"
+    STOCKFISH_ELO_1500 = "stockfish_elo_1500"
+    STOCKFISH_ELO_2000 = "stockfish_elo_2000"
 
 
 @dataclass
@@ -30,6 +40,7 @@ class GameResult:
     moves: List[str]
     pgn: str
     move_count: int
+    opponent_elo: Optional[int] = None  # Stockfish ELO if applicable
 
 
 # Piece values for evaluation
@@ -254,9 +265,76 @@ def get_random_move(board: chess.Board) -> Optional[chess.Move]:
     return random.choice(legal_moves) if legal_moves else None
 
 
+def find_stockfish() -> Optional[str]:
+    """
+    Try to find Stockfish executable.
+    Returns path to Stockfish or None if not found.
+    """
+    # Common Stockfish locations on macOS
+    possible_paths = [
+        "/opt/homebrew/bin/stockfish",  # Homebrew on Apple Silicon
+        "/usr/local/bin/stockfish",     # Homebrew on Intel
+        "/usr/bin/stockfish",            # System installation
+        "./stockfish",                   # Current directory
+        "stockfish",                     # In PATH
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path) or os.access(path, os.X_OK):
+            try:
+                # Try to verify it's actually Stockfish
+                engine = chess.engine.SimpleEngine.popen_uci(path)
+                engine.quit()
+                return path
+            except:
+                continue
+    
+    return None
+
+
+def get_stockfish_move(board: chess.Board, opponent_type: OpponentType, 
+                      stockfish_path: str, time_limit: float = 0.1) -> Optional[chess.Move]:
+    """Get a move from Stockfish at specified strength."""
+    try:
+        engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+        
+        # Configure Stockfish based on opponent type
+        if opponent_type == OpponentType.STOCKFISH_1:
+            engine.configure({"Skill Level": 0})
+            result = engine.play(board, chess.engine.Limit(time=time_limit))
+        elif opponent_type == OpponentType.STOCKFISH_5:
+            engine.configure({"Skill Level": 5})
+            result = engine.play(board, chess.engine.Limit(time=time_limit))
+        elif opponent_type == OpponentType.STOCKFISH_10:
+            engine.configure({"Skill Level": 10})
+            result = engine.play(board, chess.engine.Limit(time=time_limit))
+        elif "elo" in opponent_type.value:
+            # Extract ELO from opponent type
+            elo = int(opponent_type.value.split('_')[-1])
+            engine.configure({"UCI_LimitStrength": True, "UCI_Elo": elo})
+            result = engine.play(board, chess.engine.Limit(time=time_limit))
+        else:
+            result = engine.play(board, chess.engine.Limit(time=time_limit))
+        
+        engine.quit()
+        return result.move
+    except Exception as e:
+        print(f"\nError using Stockfish: {e}")
+        return None
+
+
 def get_opponent_move(board: chess.Board, opponent_type: OpponentType, 
-                     depth: int = 3) -> Optional[chess.Move]:
+                     depth: int = 3, stockfish_path: Optional[str] = None) -> Optional[chess.Move]:
     """Get move based on opponent type."""
+    # Check if this is a Stockfish opponent
+    if opponent_type.value.startswith("stockfish"):
+        if stockfish_path:
+            return get_stockfish_move(board, opponent_type, stockfish_path)
+        else:
+            print("\nWarning: Stockfish opponent requested but Stockfish not found. Using random moves.")
+            return get_random_move(board)
+    
+    # Non-Stockfish opponents
     if opponent_type == OpponentType.RANDOM:
         return get_random_move(board)
     elif opponent_type == OpponentType.MATERIAL:
@@ -268,7 +346,7 @@ def get_opponent_move(board: chess.Board, opponent_type: OpponentType,
 
 def play_single_game(args: Tuple) -> GameResult:
     """Play a single game. Designed to work with multiprocessing."""
-    game_number, your_color, opponent_type, depth, progress_dict, lock = args
+    game_number, your_color, opponent_type, depth, stockfish_path, progress_dict, lock = args
     
     board = chess.Board()
     moves = []
@@ -280,7 +358,7 @@ def play_single_game(args: Tuple) -> GameResult:
         if board.turn == your_ai_color:
             move = get_best_move(board, depth=depth, use_positional=True)
         else:
-            move = get_opponent_move(board, opponent_type, depth=depth)
+            move = get_opponent_move(board, opponent_type, depth=depth, stockfish_path=stockfish_path)
         
         if move:
             moves.append(board.san(move))
@@ -303,6 +381,11 @@ def play_single_game(args: Tuple) -> GameResult:
         pgn_moves.append(pgn_board.san(move))
         pgn_board.push(move)
     
+    # Extract ELO if Stockfish opponent
+    opponent_elo = None
+    if "elo" in opponent_type.value:
+        opponent_elo = int(opponent_type.value.split('_')[-1])
+    
     # Update progress counter
     with lock:
         progress_dict['completed'] += 1
@@ -314,7 +397,8 @@ def play_single_game(args: Tuple) -> GameResult:
         opponent_type=opponent_type.value,
         moves=moves,
         pgn=' '.join(pgn_moves),
-        move_count=len(moves)
+        move_count=len(moves),
+        opponent_elo=opponent_elo
     )
 
 
@@ -356,24 +440,45 @@ def print_progress(completed: int, total: int, start_time: float,
 
 def run_test_suite(num_games: int, opponent_type: OpponentType, 
                   your_color: str = 'both', depth: int = 3, 
-                  num_workers: Optional[int] = None) -> List[GameResult]:
+                  num_workers: Optional[int] = None,
+                  stockfish_path: Optional[str] = None) -> List[GameResult]:
     """
     Run a test suite of games.
     
     Args:
         num_games: Number of games to play
-        opponent_type: Type of opponent (RANDOM, MATERIAL, BASIC)
+        opponent_type: Type of opponent (RANDOM, MATERIAL, BASIC, or Stockfish variants)
         your_color: 'white', 'black', or 'both' (alternating)
         depth: Search depth for minimax (1-5, higher is stronger but slower)
         num_workers: Number of parallel workers (default: CPU count)
+        stockfish_path: Path to Stockfish executable (auto-detected if None)
     """
     if num_workers is None:
         num_workers = cpu_count()
     
+    # Auto-detect Stockfish if using Stockfish opponent
+    if opponent_type.value.startswith("stockfish") and stockfish_path is None:
+        stockfish_path = find_stockfish()
+        if stockfish_path:
+            print(f"Found Stockfish at: {stockfish_path}")
+        else:
+            print("WARNING: Stockfish not found! Install with: brew install stockfish")
+            print("Continuing without Stockfish (will use fallback)...\n")
+    
+    # Display opponent info
+    opponent_display = opponent_type.value
+    if opponent_type.value.startswith("stockfish"):
+        if "elo" in opponent_type.value:
+            elo = opponent_type.value.split('_')[-1]
+            opponent_display = f"Stockfish (ELO {elo})"
+        else:
+            level = opponent_type.value.split('_')[-1]
+            opponent_display = f"Stockfish (Level {level})"
+    
     print(f"\n{'='*70}")
     print(f"Starting test suite:")
     print(f"  Games: {num_games}")
-    print(f"  Opponent: {opponent_type.value}")
+    print(f"  Opponent: {opponent_display}")
     print(f"  Your color: {your_color}")
     print(f"  Search depth: {depth}")
     print(f"  CPU cores: {num_workers}")
@@ -386,7 +491,7 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
             color = 'white' if i % 2 == 0 else 'black'
         else:
             color = your_color
-        game_configs.append((i + 1, color, opponent_type, depth))
+        game_configs.append((i + 1, color, opponent_type, depth, stockfish_path))
     
     start_time = time.time()
     
@@ -449,16 +554,69 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     print(f"  Total time:   {total_time:.1f}s")
     print(f"  Games/sec:    {num_games/total_time:.2f}")
     print(f"  Avg game:     {total_time/num_games:.2f}s")
+    
+    # ELO estimation if playing against Stockfish
+    if opponent_type.value.startswith("stockfish") and "elo" in opponent_type.value:
+        opponent_elo = int(opponent_type.value.split('_')[-1])
+        estimated_elo = estimate_elo_from_results(win_rate, opponent_elo, num_games)
+        print(f"\nELO Estimation:")
+        print(f"  Opponent ELO: {opponent_elo}")
+        print(f"  Your estimated ELO: {estimated_elo[0]} - {estimated_elo[1]}")
+        print(f"  Confidence: {estimated_elo[2]}")
+    
     print(f"{'='*70}\n")
     
     return results
+
+
+def estimate_elo_from_results(win_rate: float, opponent_elo: int, num_games: int) -> Tuple[int, int, str]:
+    """
+    Estimate your ELO based on win rate against a known opponent.
+    Returns (min_elo, max_elo, confidence_level)
+    """
+    # Using the ELO expected score formula: E = 1 / (1 + 10^((opponent_elo - your_elo)/400))
+    # Solving for your_elo: your_elo = opponent_elo - 400 * log10((1/E) - 1)
+    
+    # Clamp win rate to avoid division by zero
+    win_rate = max(1, min(99, win_rate))
+    expected_score = win_rate / 100
+    
+    import math
+    
+    # Calculate estimated ELO
+    if expected_score >= 0.99:
+        your_elo = opponent_elo + 400
+    elif expected_score <= 0.01:
+        your_elo = opponent_elo - 400
+    else:
+        elo_diff = -400 * math.log10((1 / expected_score) - 1)
+        your_elo = int(opponent_elo + elo_diff)
+    
+    # Calculate confidence interval based on number of games
+    if num_games < 10:
+        confidence = "Very Low"
+        margin = 300
+    elif num_games < 30:
+        confidence = "Low"
+        margin = 200
+    elif num_games < 50:
+        confidence = "Medium"
+        margin = 150
+    elif num_games < 100:
+        confidence = "Good"
+        margin = 100
+    else:
+        confidence = "High"
+        margin = 75
+    
+    return (your_elo - margin, your_elo + margin, confidence)
 
 
 def export_to_csv(results: List[GameResult], filename: str = "test_results.csv"):
     """Export results to CSV file."""
     with open(filename, 'w', newline='') as csvfile:
         fieldnames = ['game_number', 'result', 'your_color', 'opponent_type', 
-                     'move_count', 'moves']
+                     'opponent_elo', 'move_count', 'moves']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         writer.writeheader()
@@ -468,6 +626,7 @@ def export_to_csv(results: List[GameResult], filename: str = "test_results.csv")
                 'result': result.result,
                 'your_color': result.your_color,
                 'opponent_type': result.opponent_type,
+                'opponent_elo': result.opponent_elo or 'N/A',
                 'move_count': result.move_count,
                 'moves': ' '.join(result.moves)
             })
@@ -502,6 +661,14 @@ if __name__ == "__main__":
     print("Chess AI Testing Tool")
     print("=====================\n")
     
+    # Check if Stockfish is available
+    stockfish_path = find_stockfish()
+    if stockfish_path:
+        print(f"✓ Stockfish found at: {stockfish_path}\n")
+    else:
+        print("✗ Stockfish not found. Install with: brew install stockfish")
+        print("  (You can still test against non-Stockfish opponents)\n")
+    
     # Quick test: 10 games vs random opponent
     print("Running quick test: 10 games vs random opponent...")
     results = run_test_suite(
@@ -516,24 +683,55 @@ if __name__ == "__main__":
     export_to_csv(results, "quick_test_results.csv")
     export_to_pgn(results, "quick_test_games.pgn")
     
-    # Uncomment for more comprehensive testing:
+    # Uncomment for Stockfish testing (if available):
     
-    # # Test vs Material-only AI
-    # print("\n\nRunning comprehensive test: 50 games vs material AI...")
+    if stockfish_path:
+        print("\n" + "="*70)
+        print("STOCKFISH TESTING")
+        print("="*70)
+        print("\nRunning ELO calibration: 20 games vs Stockfish (ELO 1000)...")
+        results = run_test_suite(
+            num_games=20,
+            opponent_type=OpponentType.STOCKFISH_ELO_1000,
+            your_color='both',
+            depth=3,
+            num_workers=4,
+            stockfish_path=stockfish_path
+        )
+        export_to_csv(results, "stockfish_elo_1000_results.csv")
+    
+    # More comprehensive tests (uncomment as needed):
+    
+    # # Test vs Stockfish ELO 800
     # results = run_test_suite(
     #     num_games=50,
-    #     opponent_type=OpponentType.MATERIAL,
+    #     opponent_type=OpponentType.STOCKFISH_ELO_800,
     #     your_color='both',
     #     depth=3
     # )
-    # export_to_csv(results, "material_test_results.csv")
+    # export_to_csv(results, "stockfish_800_results.csv")
     
-    # # Test vs Basic AI
-    # print("\n\nRunning advanced test: 50 games vs basic AI...")
+    # # Test vs Stockfish ELO 1200
     # results = run_test_suite(
     #     num_games=50,
-    #     opponent_type=OpponentType.BASIC,
+    #     opponent_type=OpponentType.STOCKFISH_ELO_1200,
     #     your_color='both',
     #     depth=3
     # )
-    # export_to_csv(results, "basic_test_results.csv")
+    # export_to_csv(results, "stockfish_1200_results.csv")
+    
+    # # Find your approximate ELO by testing multiple levels
+    # print("\n" + "="*70)
+    # print("COMPREHENSIVE ELO TESTING")
+    # print("="*70)
+    # 
+    # for elo in [800, 1000, 1200, 1500]:
+    #     opponent = OpponentType[f"STOCKFISH_ELO_{elo}"]
+    #     print(f"\nTesting against ELO {elo}...")
+    #     results = run_test_suite(
+    #         num_games=30,
+    #         opponent_type=opponent,
+    #         your_color='both',
+    #         depth=3
+    #     )
+    #     export_to_csv(results, f"elo_{elo}_test.csv")
