@@ -1,6 +1,22 @@
 # Chess AI Testing Tool
+Lightweight Python tool to stress‑test a chess AI by playing many games in parallel against a variety of opponents (random, simple material/positional AIs, or Stockfish at configurable strength). Exports results to CSV and PGN for analysis.
 
-This Python program allows you to test your chess AI against various opponents using parallel processing. It uses the `python-chess` library and implements several evaluation techniques, including material evaluation and positional evaluation, with a minimax algorithm for move decision-making. The tool is designed for stress-testing an AI's performance by playing multiple games in parallel, collecting game results, and exporting them in CSV and PGN formats.
+## Quick summary
+
+- Uses: `python-chess` + optional Stockfish engine.
+- Purpose: measure win/loss/draw rates, estimate relative ELO vs Stockfish, and collect game PGNs for inspection.
+- Parallel execution: uses `multiprocessing` to run games concurrently.
+
+## Requirements
+
+- Python 3.8+
+- python-chess
+
+Install dependencies:
+
+```bash
+python3 -m pip install --user python-chess
+```
 
 ## Features
 

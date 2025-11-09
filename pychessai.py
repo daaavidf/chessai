@@ -135,6 +135,13 @@ PIECE_TABLES = {
 }
 
 
+def ensure_outputs_dir():
+    """Create outputs directory if it doesn't exist."""
+    if not os.path.exists("outputs"):
+        os.makedirs("outputs")
+        print("Created 'outputs' directory")
+
+
 def get_piece_value(piece: chess.Piece, square: chess.Square) -> int:
     """Get the value of a piece at a specific square."""
     piece_type = piece.piece_type
@@ -561,9 +568,9 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     print(f"  Avg game:     {total_time/num_games:.2f}s")
     
     # ELO estimation for any Stockfish opponent
-    print(f"\n: opponent_type.value = '{opponent_type.value}'")  # Debug line
+    print(f"\nopponent_type.value = '{opponent_type.value}'")  # Debug line
     if opponent_type.value.startswith("stockfish"):
-        print(":Detected Stockfish opponent")  # Debug line
+        print("Detected Stockfish opponent")  # Debug line
         # Get approximate ELO for skill levels
         skill_level_elos = {
             0: 700, 1: 850, 3: 1050, 5: 1250, 
@@ -573,12 +580,12 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
         opponent_elo = None
         if "elo" in opponent_type.value:
             opponent_elo = int(opponent_type.value.split('_')[-1])
-            print(f":ELO mode, opponent_elo = {opponent_elo}")  # Debug line
+            print(f"ELO mode, opponent_elo = {opponent_elo}")  # Debug line
         elif "level" in opponent_type.value:
             level = int(opponent_type.value.split('_')[-1])
-            print(f":Skill level mode, level = {level}")  # Debug line
+            print(f"Skill level mode, level = {level}")  # Debug line
             opponent_elo = skill_level_elos.get(level)
-            print(f":Mapped to ELO = {opponent_elo}")  # Debug line
+            print(f"Mapped to ELO = {opponent_elo}")  # Debug line
         
         if opponent_elo:
             estimated_elo = estimate_elo_from_results(win_rate, opponent_elo, num_games)
@@ -648,8 +655,11 @@ def estimate_elo_from_results(win_rate: float, opponent_elo: int, num_games: int
 
 
 def export_to_csv(results: List[GameResult], filename: str = "test_results.csv"):
-    """Export results to CSV file."""
-    with open(filename, 'w', newline='') as csvfile:
+    """Export results to CSV file in outputs directory."""
+    ensure_outputs_dir()
+    filepath = os.path.join("outputs", filename)
+    
+    with open(filepath, 'w', newline='') as csvfile:
         fieldnames = ['game_number', 'result', 'your_color', 'opponent_type', 
                      'opponent_elo', 'move_count', 'moves']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -666,12 +676,15 @@ def export_to_csv(results: List[GameResult], filename: str = "test_results.csv")
                 'moves': ' '.join(result.moves)
             })
     
-    print(f"Results exported to {filename}")
+    print(f"Results exported to {filepath}")
 
 
 def export_to_pgn(results: List[GameResult], filename: str = "test_games.pgn"):
-    """Export games to PGN format."""
-    with open(filename, 'w') as pgnfile:
+    """Export games to PGN format in outputs directory."""
+    ensure_outputs_dir()
+    filepath = os.path.join("outputs", filename)
+    
+    with open(filepath, 'w') as pgnfile:
         for result in results:
             pgnfile.write(f'[Event "AI Testing Match"]\n')
             pgnfile.write(f'[Round "{result.game_number}"]\n')
@@ -688,13 +701,16 @@ def export_to_pgn(results: List[GameResult], filename: str = "test_games.pgn"):
             pgnfile.write(f'[Result "{pgn_result}"]\n\n')
             pgnfile.write(' '.join(result.moves) + f' {pgn_result}\n\n')
     
-    print(f"Games exported to {filename}")
+    print(f"Games exported to {filepath}")
 
 
 if __name__ == "__main__":
     # Example usage
     print("Chess AI Testing Tool")
     print("=====================\n")
+    
+    # Ensure outputs directory exists
+    ensure_outputs_dir()
     
     # Check if Stockfish is available
     stockfish_path = find_stockfish()
@@ -715,7 +731,7 @@ if __name__ == "__main__":
     #)
     
     # Export results
-    # eexport_to_csv(results, "quick_test_results.csv")
+    # export_to_csv(results, "quick_test_results.csv")
     # export_to_pgn(results, "quick_test_games.pgn")
     
     # Uncomment for Stockfish testing (if available):
@@ -724,18 +740,18 @@ if __name__ == "__main__":
         print("\n" + "="*70)
         print("STOCKFISH TESTING")
         print("="*70)
-        print("\nRunning calibration: 20 games vs Stockfish Level 1 (~800-1000 ELO)...")
+        print("\nRunning calibration: 20 games vs Stockfish Level 0 (~800-1000 ELO)...")
         results = run_test_suite(
             num_games=20,
-            opponent_type=OpponentType.STOCKFISH_1,
+            opponent_type=OpponentType.STOCKFISH_0,
             your_color='both',
             depth=3,
             num_workers=4,
             stockfish_path=stockfish_path
         )
-        export_to_csv(results, "stockfish_level_1_results.csv")
+        export_to_csv(results, "stockfish_level_0_results.csv")
 
-    
+
     # More comprehensive tests (uncomment as needed):
     
     # # Test vs Stockfish Skill Levels (for sub-1320 ELO estimation)
@@ -783,26 +799,4 @@ if __name__ == "__main__":
     # print("="*70)
     # print("\nTesting against multiple skill levels to find your ELO...")
     # 
-    # # Test skill levels 0, 1, 3, 5, 10 (roughly 600-1200 ELO)
-    # for level in [0, 1, 3, 5, 10]:
-    #     opponent = OpponentType[f"STOCKFISH_{level}"]
-    #     print(f"\nTesting against Skill Level {level}...")
-    #     results = run_test_suite(
-    #         num_games=30,
-    #         opponent_type=opponent,
-    #         your_color='both',
-    #         depth=3
-    #     )
-    #     export_to_csv(results, f"skill_level_{level}_test.csv")
-    # 
-    # # If doing well, test actual ELO ratings
-    # for elo in [1320, 1500, 1800]:
-    #     opponent = OpponentType[f"STOCKFISH_ELO_{elo}"]
-    #     print(f"\nTesting against ELO {elo}...")
-    #     results = run_test_suite(
-    #         num_games=30,
-    #         opponent_type=opponent,
-    #         your_color='both',
-    #         depth=3
-    #     )
-    #     export_to_csv(results, f"elo_{elo}_test.csv")
+    # # Test skill levels 0,

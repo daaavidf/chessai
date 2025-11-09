@@ -7,8 +7,9 @@
 
 # Logs
 *.log
-quick_test_games.pgn
-quick_test_results.csv
+
+# Generated outputs
+/outputs/
 
 # Python artifacts
 __pycache__/
