@@ -24,6 +24,7 @@ python3 -m pip install --user python-chess
   - **Random**: Random move selection.
   - **Material**: Opponent only considers material count (ignores positional advantage).
   - **Basic**: Uses a basic evaluation of the board, considering both material and position.
+  - - **V1 - Basic**: Uses a basic evaluation of the board, considering both material and position. V1 was benchmarked over 100 games (3 depth) against stockfish level 0 and had an estimated ELO of approximitley 476 - 626. V1 release should have the engine in a seperate python file and display to the user what version number is being used. Subsequent versions will have their own enginer version .py files.
   
 - **Parallel Processing**: Run multiple games simultaneously using Python's `multiprocessing` library for faster testing.
 
