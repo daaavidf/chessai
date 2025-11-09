@@ -284,6 +284,7 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     print(f"  Games: {num_games}")
     print(f"  Opponent: {opponent_display}")
     print(f"  Your color: {your_color}")
+    print(f"  Your AI: engine_v1")
     print(f"  Search depth: {depth}")
     print(f"  CPU cores: {num_workers}")
     print(f"{'='*70}\n")
