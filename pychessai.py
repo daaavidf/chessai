@@ -560,14 +560,44 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     print(f"  Games/sec:    {num_games/total_time:.2f}")
     print(f"  Avg game:     {total_time/num_games:.2f}s")
     
-    # ELO estimation if playing against Stockfish
-    if opponent_type.value.startswith("stockfish") and "elo" in opponent_type.value:
-        opponent_elo = int(opponent_type.value.split('_')[-1])
-        estimated_elo = estimate_elo_from_results(win_rate, opponent_elo, num_games)
-        print(f"\nELO Estimation:")
-        print(f"  Opponent ELO: {opponent_elo}")
-        print(f"  Your estimated ELO: {estimated_elo[0]} - {estimated_elo[1]}")
-        print(f"  Confidence: {estimated_elo[2]}")
+    # ELO estimation for any Stockfish opponent
+    print(f"\n: opponent_type.value = '{opponent_type.value}'")  # Debug line
+    if opponent_type.value.startswith("stockfish"):
+        print(":Detected Stockfish opponent")  # Debug line
+        # Get approximate ELO for skill levels
+        skill_level_elos = {
+            0: 700, 1: 850, 3: 1050, 5: 1250, 
+            10: 1450, 15: 1750, 20: 2050
+        }
+        
+        opponent_elo = None
+        if "elo" in opponent_type.value:
+            opponent_elo = int(opponent_type.value.split('_')[-1])
+            print(f":ELO mode, opponent_elo = {opponent_elo}")  # Debug line
+        elif "level" in opponent_type.value:
+            level = int(opponent_type.value.split('_')[-1])
+            print(f":Skill level mode, level = {level}")  # Debug line
+            opponent_elo = skill_level_elos.get(level)
+            print(f":Mapped to ELO = {opponent_elo}")  # Debug line
+        
+        if opponent_elo:
+            estimated_elo = estimate_elo_from_results(win_rate, opponent_elo, num_games)
+            print(f"\nELO Estimation:")
+            print(f"  Opponent approx ELO: {opponent_elo}")
+            print(f"  Your estimated ELO: {estimated_elo[0]} - {estimated_elo[1]}")
+            print(f"  Confidence: {estimated_elo[2]}")
+            
+            # Provide guidance based on results
+            if win_rate >= 70:
+                print(f"\n  💡 Recommendation: You're dominating this level! Try a stronger opponent.")
+            elif win_rate >= 45 and win_rate <= 55:
+                print(f"\n  💡 Recommendation: This is your level! Great match.")
+            elif win_rate <= 30:
+                print(f"\n  💡 Recommendation: This opponent is too strong. Try an easier level.")
+        else:
+            print(f"Debug: opponent_elo is None")  # Debug line
+    else:
+        print("Debug: Not a Stockfish opponent")  # Debug line
     
     print(f"{'='*70}\n")
     
@@ -675,18 +705,18 @@ if __name__ == "__main__":
         print("  (You can still test against non-Stockfish opponents)\n")
     
     # Quick test: 10 games vs random opponent
-    print("Running quick test: 10 games vs random opponent...")
-    results = run_test_suite(
-        num_games=10,
-        opponent_type=OpponentType.RANDOM,
-        your_color='both',
-        depth=2,
-        num_workers=4
-    )
+    #print("Running quick test: 10 games vs random opponent...")
+    #results = run_test_suite(
+    #    num_games=10,
+    #    opponent_type=OpponentType.RANDOM,
+    #    your_color='both',
+    #    depth=2,
+    #    num_workers=4
+    #)
     
     # Export results
-    export_to_csv(results, "quick_test_results.csv")
-    export_to_pgn(results, "quick_test_games.pgn")
+    # eexport_to_csv(results, "quick_test_results.csv")
+    # export_to_pgn(results, "quick_test_games.pgn")
     
     # Uncomment for Stockfish testing (if available):
     
@@ -694,16 +724,17 @@ if __name__ == "__main__":
         print("\n" + "="*70)
         print("STOCKFISH TESTING")
         print("="*70)
-        print("\nRunning calibration: 50 games vs Stockfish Level 1 (~800-1000 ELO)...")
+        print("\nRunning calibration: 20 games vs Stockfish Level 1 (~800-1000 ELO)...")
         results = run_test_suite(
-            num_games=50,
+            num_games=20,
             opponent_type=OpponentType.STOCKFISH_1,
             your_color='both',
             depth=3,
-            num_workers=8,
+            num_workers=4,
             stockfish_path=stockfish_path
         )
         export_to_csv(results, "stockfish_level_1_results.csv")
+
     
     # More comprehensive tests (uncomment as needed):
     
