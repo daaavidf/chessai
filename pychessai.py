@@ -15,6 +15,7 @@ from multiprocessing import Pool, cpu_count, Manager
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 from enum import Enum
+from v1engine import V1Engine
 
 
 class OpponentType(Enum):
@@ -450,6 +451,31 @@ def print_progress(completed: int, total: int, start_time: float,
     sys.stdout.flush()
 
 
+@dataclass
+class TestConfig:
+    """Configuration for test runs."""
+    num_games: int = 100
+    engine_type: EngineType = EngineType.V1
+    engine_depth: int = 3
+    opponent_type: OpponentType = OpponentType.RANDOM
+    your_color: str = 'both'
+    num_workers: int = cpu_count()
+    stockfish_path: Optional[str] = None
+
+
+def get_engine(config: TestConfig):
+    """Factory function to create engine instance."""
+    if config.engine_type == EngineType.V1:
+        return V1Engine(depth=config.engine_depth)
+    raise ValueError(f"Unknown engine type: {config.engine_type}")
+
+
+def run_test_suite(config: TestConfig):
+    """Run test suite with specified engine and configuration."""
+    engine = get_engine(config)
+    # ... rest of implementation using engine.get_best_move()
+
+
 def run_test_suite(num_games: int, opponent_type: OpponentType, 
                   your_color: str = 'both', depth: int = 3, 
                   num_workers: Optional[int] = None,
@@ -740,13 +766,13 @@ if __name__ == "__main__":
         print("\n" + "="*70)
         print("STOCKFISH TESTING")
         print("="*70)
-        print("\nRunning calibration: 20 games vs Stockfish Level 0 (~800-1000 ELO)...")
+        print("\nRunning calibration: 1000 games vs Stockfish Level 0...")
         results = run_test_suite(
-            num_games=20,
+            num_games=1000,
             opponent_type=OpponentType.STOCKFISH_0,
             your_color='both',
             depth=3,
-            num_workers=4,
+            num_workers=7,
             stockfish_path=stockfish_path
         )
         export_to_csv(results, "stockfish_level_0_results.csv")

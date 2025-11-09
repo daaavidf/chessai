@@ -1,5 +1,5 @@
 # Chess AI Testing Tool
-Lightweight Python tool to stress‑test a chess AI by playing many games in parallel against a variety of opponents (random, simple material/positional AIs, or Stockfish at configurable strength). Exports results to CSV and PGN for analysis.
+Lightweight Python tool to stress‑test a chess AI by playing many games in parallel against a variety of opponents (random, simple material/positional AIs, or Stockfish at configurable strength). Exports results to CSV and PGN for analysis.V1
 
 ## Quick summary
 
@@ -23,7 +23,7 @@ python3 -m pip install --user python-chess
 - **Opponent Types**: Test your AI against various types of opponents:
   - **Random**: Random move selection.
   - **Material**: Opponent only considers material count (ignores positional advantage).
-  - **Basic**: Uses a basic evaluation of the board, considering both material and position.
+  - **V1 - Basic**: Uses a basic evaluation of the board, considering both material and position. V1 was benchmarked over 100 games (3 depth) against stockfish level 0 and had an estimated ELO of 
   
 - **Parallel Processing**: Run multiple games simultaneously using Python's `multiprocessing` library for faster testing.
 
