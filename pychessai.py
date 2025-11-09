@@ -16,6 +16,9 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional
 from enum import Enum
 
+# Import the chess engine
+from engine_v1 import get_best_move, evaluate_material
+
 
 class OpponentType(Enum):
     RANDOM = "random"
@@ -48,227 +51,11 @@ class GameResult:
     opponent_elo: Optional[int] = None  # Stockfish ELO if applicable
 
 
-# Piece values for evaluation
-PIECE_VALUES = {
-    chess.PAWN: 100,
-    chess.KNIGHT: 320,
-    chess.BISHOP: 330,
-    chess.ROOK: 500,
-    chess.QUEEN: 900,
-    chess.KING: 20000
-}
-
-# Piece-square tables (from white's perspective)
-PAWN_TABLE = [
-    0,  0,  0,  0,  0,  0,  0,  0,
-    50, 50, 50, 50, 50, 50, 50, 50,
-    10, 10, 20, 30, 30, 20, 10, 10,
-    5,  5, 10, 25, 25, 10,  5,  5,
-    0,  0,  0, 20, 20,  0,  0,  0,
-    5, -5,-10,  0,  0,-10, -5,  5,
-    5, 10, 10,-20,-20, 10, 10,  5,
-    0,  0,  0,  0,  0,  0,  0,  0
-]
-
-KNIGHT_TABLE = [
-    -50,-40,-30,-30,-30,-30,-40,-50,
-    -40,-20,  0,  0,  0,  0,-20,-40,
-    -30,  0, 10, 15, 15, 10,  0,-30,
-    -30,  5, 15, 20, 20, 15,  5,-30,
-    -30,  0, 15, 20, 20, 15,  0,-30,
-    -30,  5, 10, 15, 15, 10,  5,-30,
-    -40,-20,  0,  5,  5,  0,-20,-40,
-    -50,-40,-30,-30,-30,-30,-40,-50
-]
-
-BISHOP_TABLE = [
-    -20,-10,-10,-10,-10,-10,-10,-20,
-    -10,  0,  0,  0,  0,  0,  0,-10,
-    -10,  0,  5, 10, 10,  5,  0,-10,
-    -10,  5,  5, 10, 10,  5,  5,-10,
-    -10,  0, 10, 10, 10, 10,  0,-10,
-    -10, 10, 10, 10, 10, 10, 10,-10,
-    -10,  5,  0,  0,  0,  0,  5,-10,
-    -20,-10,-10,-10,-10,-10,-10,-20
-]
-
-ROOK_TABLE = [
-    0,  0,  0,  0,  0,  0,  0,  0,
-    5, 10, 10, 10, 10, 10, 10,  5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    0,  0,  0,  5,  5,  0,  0,  0
-]
-
-QUEEN_TABLE = [
-    -20,-10,-10, -5, -5,-10,-10,-20,
-    -10,  0,  0,  0,  0,  0,  0,-10,
-    -10,  0,  5,  5,  5,  5,  0,-10,
-    -5,  0,  5,  5,  5,  5,  0, -5,
-    0,  0,  5,  5,  5,  5,  0, -5,
-    -10,  5,  5,  5,  5,  5,  0,-10,
-    -10,  0,  5,  0,  0,  0,  0,-10,
-    -20,-10,-10, -5, -5,-10,-10,-20
-]
-
-KING_TABLE = [
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -20,-30,-30,-40,-40,-30,-30,-20,
-    -10,-20,-20,-20,-20,-20,-20,-10,
-    20, 20,  0,  0,  0,  0, 20, 20,
-    20, 30, 10,  0,  0, 10, 30, 20
-]
-
-PIECE_TABLES = {
-    chess.PAWN: PAWN_TABLE,
-    chess.KNIGHT: KNIGHT_TABLE,
-    chess.BISHOP: BISHOP_TABLE,
-    chess.ROOK: ROOK_TABLE,
-    chess.QUEEN: QUEEN_TABLE,
-    chess.KING: KING_TABLE
-}
-
-
 def ensure_outputs_dir():
     """Create outputs directory if it doesn't exist."""
     if not os.path.exists("outputs"):
         os.makedirs("outputs")
         print("Created 'outputs' directory")
-
-
-def get_piece_value(piece: chess.Piece, square: chess.Square) -> int:
-    """Get the value of a piece at a specific square."""
-    piece_type = piece.piece_type
-    base_value = PIECE_VALUES[piece_type]
-    
-    # Get position value from piece-square table
-    table = PIECE_TABLES[piece_type]
-    
-    # Flip square index for black pieces
-    if piece.color == chess.BLACK:
-        square = chess.square_mirror(square)
-    
-    position_value = table[square]
-    
-    return base_value + position_value
-
-
-def evaluate_board(board: chess.Board) -> int:
-    """Evaluate the board position. Positive is good for white, negative for black."""
-    if board.is_checkmate():
-        return -20000 if board.turn == chess.WHITE else 20000
-    
-    if board.is_stalemate() or board.is_insufficient_material():
-        return 0
-    
-    evaluation = 0
-    
-    for square in chess.SQUARES:
-        piece = board.piece_at(square)
-        if piece:
-            value = get_piece_value(piece, square)
-            evaluation += value if piece.color == chess.WHITE else -value
-    
-    return evaluation
-
-
-def evaluate_material(board: chess.Board) -> int:
-    """Evaluate board based only on material count."""
-    if board.is_checkmate():
-        return -20000 if board.turn == chess.WHITE else 20000
-    
-    if board.is_stalemate() or board.is_insufficient_material():
-        return 0
-    
-    evaluation = 0
-    
-    for square in chess.SQUARES:
-        piece = board.piece_at(square)
-        if piece:
-            value = PIECE_VALUES[piece.piece_type]
-            evaluation += value if piece.color == chess.WHITE else -value
-    
-    return evaluation
-
-
-def minimax(board: chess.Board, depth: int, alpha: int, beta: int, 
-            maximizing_player: bool, use_positional: bool = True) -> int:
-    """Minimax algorithm with alpha-beta pruning."""
-    if depth == 0 or board.is_game_over():
-        return evaluate_board(board) if use_positional else evaluate_material(board)
-    
-    legal_moves = list(board.legal_moves)
-    
-    # Move ordering: prioritize captures
-    legal_moves.sort(key=lambda move: board.is_capture(move), reverse=True)
-    
-    if maximizing_player:
-        max_eval = float('-inf')
-        for move in legal_moves:
-            board.push(move)
-            eval_score = minimax(board, depth - 1, alpha, beta, False, use_positional)
-            board.pop()
-            max_eval = max(max_eval, eval_score)
-            alpha = max(alpha, eval_score)
-            if beta <= alpha:
-                break  # Beta cutoff
-        return max_eval
-    else:
-        min_eval = float('inf')
-        for move in legal_moves:
-            board.push(move)
-            eval_score = minimax(board, depth - 1, alpha, beta, True, use_positional)
-            board.pop()
-            min_eval = min(min_eval, eval_score)
-            beta = min(beta, eval_score)
-            if beta <= alpha:
-                break  # Alpha cutoff
-        return min_eval
-
-
-def get_best_move(board: chess.Board, depth: int = 3, 
-                  use_positional: bool = True) -> Optional[chess.Move]:
-    """Find the best move using minimax algorithm."""
-    legal_moves = list(board.legal_moves)
-    
-    if not legal_moves:
-        return None
-    
-    # Simple opening book for speed
-    if board.fullmove_number <= 2:
-        opening_moves = [m for m in legal_moves if m.uci() in 
-                        ['e2e4', 'e7e5', 'd2d4', 'd7d5', 'g1f3', 'b1c3', 'g8f6', 'b8c6']]
-        if opening_moves:
-            return random.choice(opening_moves)
-    
-    best_move = None
-    best_value = float('-inf') if board.turn == chess.WHITE else float('inf')
-    
-    # Move ordering
-    legal_moves.sort(key=lambda move: board.is_capture(move), reverse=True)
-    
-    for move in legal_moves:
-        board.push(move)
-        board_value = minimax(board, depth - 1, float('-inf'), float('inf'), 
-                             board.turn == chess.WHITE, use_positional)
-        board.pop()
-        
-        if board.turn == chess.WHITE:
-            if board_value > best_value:
-                best_value = board_value
-                best_move = move
-        else:
-            if board_value < best_value:
-                best_value = board_value
-                best_move = move
-    
-    return best_move or legal_moves[0]
 
 
 def get_random_move(board: chess.Board) -> Optional[chess.Move]:
@@ -335,6 +122,11 @@ def get_stockfish_move(board: chess.Board, opponent_type: OpponentType,
         return None
 
 
+def get_material_move(board: chess.Board, depth: int = 1) -> Optional[chess.Move]:
+    """Get best move based on material evaluation only."""
+    return get_best_move(board, depth=depth, use_positional=False)
+
+
 def get_opponent_move(board: chess.Board, opponent_type: OpponentType, 
                      depth: int = 3, stockfish_path: Optional[str] = None) -> Optional[chess.Move]:
     """Get move based on opponent type."""
@@ -350,7 +142,7 @@ def get_opponent_move(board: chess.Board, opponent_type: OpponentType,
     if opponent_type == OpponentType.RANDOM:
         return get_random_move(board)
     elif opponent_type == OpponentType.MATERIAL:
-        return get_best_move(board, depth=1, use_positional=False)
+        return get_material_move(board, depth=1)
     elif opponent_type == OpponentType.BASIC:
         return get_best_move(board, depth=depth, use_positional=True)
     return get_random_move(board)
@@ -492,6 +284,7 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     print(f"  Games: {num_games}")
     print(f"  Opponent: {opponent_display}")
     print(f"  Your color: {your_color}")
+    print(f"  Your AI: engine_v1")
     print(f"  Search depth: {depth}")
     print(f"  CPU cores: {num_workers}")
     print(f"{'='*70}\n")
@@ -568,9 +361,7 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
     print(f"  Avg game:     {total_time/num_games:.2f}s")
     
     # ELO estimation for any Stockfish opponent
-    print(f"\nopponent_type.value = '{opponent_type.value}'")  # Debug line
     if opponent_type.value.startswith("stockfish"):
-        print("Detected Stockfish opponent")  # Debug line
         # Get approximate ELO for skill levels
         skill_level_elos = {
             0: 700, 1: 850, 3: 1050, 5: 1250, 
@@ -580,12 +371,9 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
         opponent_elo = None
         if "elo" in opponent_type.value:
             opponent_elo = int(opponent_type.value.split('_')[-1])
-            print(f"ELO mode, opponent_elo = {opponent_elo}")  # Debug line
         elif "level" in opponent_type.value:
             level = int(opponent_type.value.split('_')[-1])
-            print(f"Skill level mode, level = {level}")  # Debug line
             opponent_elo = skill_level_elos.get(level)
-            print(f"Mapped to ELO = {opponent_elo}")  # Debug line
         
         if opponent_elo:
             estimated_elo = estimate_elo_from_results(win_rate, opponent_elo, num_games)
@@ -601,10 +389,6 @@ def run_test_suite(num_games: int, opponent_type: OpponentType,
                 print(f"\n  💡 Recommendation: This is your level! Great match.")
             elif win_rate <= 30:
                 print(f"\n  💡 Recommendation: This opponent is too strong. Try an easier level.")
-        else:
-            print(f"Debug: opponent_elo is None")  # Debug line
-    else:
-        print("Debug: Not a Stockfish opponent")  # Debug line
     
     print(f"{'='*70}\n")
     
@@ -720,22 +504,6 @@ if __name__ == "__main__":
         print("✗ Stockfish not found. Install with: brew install stockfish")
         print("  (You can still test against non-Stockfish opponents)\n")
     
-    # Quick test: 10 games vs random opponent
-    #print("Running quick test: 10 games vs random opponent...")
-    #results = run_test_suite(
-    #    num_games=10,
-    #    opponent_type=OpponentType.RANDOM,
-    #    your_color='both',
-    #    depth=2,
-    #    num_workers=4
-    #)
-    
-    # Export results
-    # export_to_csv(results, "quick_test_results.csv")
-    # export_to_pgn(results, "quick_test_games.pgn")
-    
-    # Uncomment for Stockfish testing (if available):
-    
     if stockfish_path:
         print("\n" + "="*70)
         print("STOCKFISH TESTING")
@@ -750,53 +518,3 @@ if __name__ == "__main__":
             stockfish_path=stockfish_path
         )
         export_to_csv(results, "stockfish_level_0_results.csv")
-
-
-    # More comprehensive tests (uncomment as needed):
-    
-    # # Test vs Stockfish Skill Levels (for sub-1320 ELO estimation)
-    # print("\nTesting against Stockfish Level 0 (weakest)...")
-    # results = run_test_suite(
-    #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_0,
-    #     your_color='both',
-    #     depth=3
-    # )
-    # export_to_csv(results, "stockfish_level_0_results.csv")
-    
-    # print("\nTesting against Stockfish Level 3...")
-    # results = run_test_suite(
-    #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_3,
-    #     your_color='both',
-    #     depth=3
-    # )
-    # export_to_csv(results, "stockfish_level_3_results.csv")
-    
-    # # Test vs Stockfish ELO (1320+)
-    # print("\nTesting against Stockfish ELO 1320...")
-    # results = run_test_suite(
-    #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_ELO_1320,
-    #     your_color='both',
-    #     depth=3
-    # )
-    # export_to_csv(results, "stockfish_elo_1320_results.csv")
-    
-    # # Test vs higher ELOs
-    # print("\nTesting against Stockfish ELO 1500...")
-    # results = run_test_suite(
-    #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_ELO_1500,
-    #     your_color='both',
-    #     depth=3
-    # )
-    # export_to_csv(results, "stockfish_1500_results.csv")
-    
-    # # Comprehensive ladder test
-    # print("\n" + "="*70)
-    # print("COMPREHENSIVE ELO LADDER TEST")
-    # print("="*70)
-    # print("\nTesting against multiple skill levels to find your ELO...")
-    # 
-    # # Test skill levels 0,
