@@ -18,6 +18,12 @@ from enum import Enum
 from v1engine import V1Engine
 
 
+class EngineType(Enum):
+    """Available chess engines."""
+    V1 = "v1"
+    # Add more engines here as needed
+
+
 class OpponentType(Enum):
     RANDOM = "random"
     MATERIAL = "material"
@@ -471,11 +477,22 @@ def get_engine(config: TestConfig):
 
 
 def run_test_suite(config: TestConfig):
-    """Run test suite with specified engine and configuration."""
-    engine = get_engine(config)
-    # ... rest of implementation using engine.get_best_move()
-
-
+    """Run test suite with specified configuration."""
+    print(f"\nUsing engine: {config.engine_type.value} (depth: {config.engine_depth})")
+    
+    if config.num_workers is None:
+        config.num_workers = cpu_count()
+    
+    # Auto-detect Stockfish if using Stockfish opponent
+    if config.opponent_type.value.startswith("stockfish") and config.stockfish_path is None:
+        config.stockfish_path = find_stockfish()
+        if config.stockfish_path:
+            print(f"Found Stockfish at: {config.stockfish_path}")
+        else:
+            print("WARNING: Stockfish not found! Install with: brew install stockfish")
+            print("Continuing without Stockfish (will use fallback)...\n")
+    
+    # ... rest of existing implementation using config parameters ...
 def run_test_suite(num_games: int, opponent_type: OpponentType, 
                   your_color: str = 'both', depth: int = 3, 
                   num_workers: Optional[int] = None,
@@ -642,16 +659,12 @@ def estimate_elo_from_results(win_rate: float, opponent_elo: int, num_games: int
     Estimate your ELO based on win rate against a known opponent.
     Returns (min_elo, max_elo, confidence_level)
     """
-    # Using the ELO expected score formula: E = 1 / (1 + 10^((opponent_elo - your_elo)/400))
-    # Solving for your_elo: your_elo = opponent_elo - 400 * log10((1/E) - 1)
-    
-    # Clamp win rate to avoid division by zero
+    # Clamp win rate between 1% and 99%
     win_rate = max(1, min(99, win_rate))
     expected_score = win_rate / 100
     
+    # Calculate base ELO
     import math
-    
-    # Calculate estimated ELO
     if expected_score >= 0.99:
         your_elo = opponent_elo + 400
     elif expected_score <= 0.01:
@@ -660,22 +673,22 @@ def estimate_elo_from_results(win_rate: float, opponent_elo: int, num_games: int
         elo_diff = -400 * math.log10((1 / expected_score) - 1)
         your_elo = int(opponent_elo + elo_diff)
     
-    # Calculate confidence interval based on number of games
+    # Calculate margin based on number of games
     if num_games < 10:
-        confidence = "Very Low"
         margin = 300
+        confidence = "Very Low"
     elif num_games < 30:
-        confidence = "Low"
         margin = 200
+        confidence = "Low"
     elif num_games < 50:
-        confidence = "Medium"
         margin = 150
+        confidence = "Medium"
     elif num_games < 100:
-        confidence = "Good"
         margin = 100
+        confidence = "Good"
     else:
-        confidence = "High"
         margin = 75
+        confidence = "High"
     
     return (your_elo - margin, your_elo + margin, confidence)
 
@@ -687,142 +700,8 @@ def export_to_csv(results: List[GameResult], filename: str = "test_results.csv")
     
     with open(filepath, 'w', newline='') as csvfile:
         fieldnames = ['game_number', 'result', 'your_color', 'opponent_type', 
-                     'opponent_elo', 'move_count', 'moves']
+                     'opponent_elo', 'move_count', 'moves', 'pgn']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
         writer.writeheader()
         for result in results:
-            writer.writerow({
-                'game_number': result.game_number,
-                'result': result.result,
-                'your_color': result.your_color,
-                'opponent_type': result.opponent_type,
-                'opponent_elo': result.opponent_elo or 'N/A',
-                'move_count': result.move_count,
-                'moves': ' '.join(result.moves)
-            })
-    
-    print(f"Results exported to {filepath}")
-
-
-def export_to_pgn(results: List[GameResult], filename: str = "test_games.pgn"):
-    """Export games to PGN format in outputs directory."""
-    ensure_outputs_dir()
-    filepath = os.path.join("outputs", filename)
-    
-    with open(filepath, 'w') as pgnfile:
-        for result in results:
-            pgnfile.write(f'[Event "AI Testing Match"]\n')
-            pgnfile.write(f'[Round "{result.game_number}"]\n')
-            pgnfile.write(f'[White "{"Your AI" if result.your_color == "white" else result.opponent_type}"]\n')
-            pgnfile.write(f'[Black "{"Your AI" if result.your_color == "black" else result.opponent_type}"]\n')
-            
-            if result.result == 'win':
-                pgn_result = '1-0' if result.your_color == 'white' else '0-1'
-            elif result.result == 'loss':
-                pgn_result = '0-1' if result.your_color == 'white' else '1-0'
-            else:
-                pgn_result = '1/2-1/2'
-            
-            pgnfile.write(f'[Result "{pgn_result}"]\n\n')
-            pgnfile.write(' '.join(result.moves) + f' {pgn_result}\n\n')
-    
-    print(f"Games exported to {filepath}")
-
-
-if __name__ == "__main__":
-    # Example usage
-    print("Chess AI Testing Tool")
-    print("=====================\n")
-    
-    # Ensure outputs directory exists
-    ensure_outputs_dir()
-    
-    # Check if Stockfish is available
-    stockfish_path = find_stockfish()
-    if stockfish_path:
-        print(f"✓ Stockfish found at: {stockfish_path}\n")
-    else:
-        print("✗ Stockfish not found. Install with: brew install stockfish")
-        print("  (You can still test against non-Stockfish opponents)\n")
-    
-    # Quick test: 10 games vs random opponent
-    #print("Running quick test: 10 games vs random opponent...")
-    #results = run_test_suite(
-    #    num_games=10,
-    #    opponent_type=OpponentType.RANDOM,
-    #    your_color='both',
-    #    depth=2,
-    #    num_workers=4
-    #)
-    
-    # Export results
-    # export_to_csv(results, "quick_test_results.csv")
-    # export_to_pgn(results, "quick_test_games.pgn")
-    
-    # Uncomment for Stockfish testing (if available):
-    
-    if stockfish_path:
-        print("\n" + "="*70)
-        print("STOCKFISH TESTING")
-        print("="*70)
-        print("\nRunning calibration: 1000 games vs Stockfish Level 0...")
-        results = run_test_suite(
-            num_games=1000,
-            opponent_type=OpponentType.STOCKFISH_0,
-            your_color='both',
-            depth=3,
-            num_workers=7,
-            stockfish_path=stockfish_path
-        )
-        export_to_csv(results, "stockfish_level_0_results.csv")
-
-
-    # More comprehensive tests (uncomment as needed):
-    
-    # # Test vs Stockfish Skill Levels (for sub-1320 ELO estimation)
-    # print("\nTesting against Stockfish Level 0 (weakest)...")
-    # results = run_test_suite(
-    #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_0,
-    #     your_color='both',
-    #     depth=3
-    # )
-    # export_to_csv(results, "stockfish_level_0_results.csv")
-    
-    # print("\nTesting against Stockfish Level 3...")
-    # results = run_test_suite(
-    #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_3,
-    #     your_color='both',
-    #     depth=3
-    # )
-    # export_to_csv(results, "stockfish_level_3_results.csv")
-    
-    # # Test vs Stockfish ELO (1320+)
-    # print("\nTesting against Stockfish ELO 1320...")
-    # results = run_test_suite(
-    #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_ELO_1320,
-    #     your_color='both',
-    #     depth=3
-    # )
-    # export_to_csv(results, "stockfish_elo_1320_results.csv")
-    
-    # # Test vs higher ELOs
-    # print("\nTesting against Stockfish ELO 1500...")
-    # results = run_test_suite(
-    #     num_games=50,
-    #     opponent_type=OpponentType.STOCKFISH_ELO_1500,
-    #     your_color='both',
-    #     depth=3
-    # )
-    # export_to_csv(results, "stockfish_1500_results.csv")
-    
-    # # Comprehensive ladder test
-    # print("\n" + "="*70)
-    # print("COMPREHENSIVE ELO LADDER TEST")
-    # print("="*70)
-    # print("\nTesting against multiple skill levels to find your ELO...")
-    # 
-    # # Test skill levels 0,
+            writer.writerow(vars(result))
